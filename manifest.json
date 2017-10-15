@@ -1,0 +1,29 @@
+[{
+    "type": "module"
+    , "name": "TruJS.simpleViewSystem"
+
+    , "hints": {
+        "TruJS": "{repos}/TruJS"
+    }
+
+    , "module": {
+        "document": [":document"]
+    }
+
+    , "format": "browser"
+    , "minify": false
+    , "namespace": "SVS"
+
+    , "output": "./build/{name}/app.js"
+}, {
+    "type": "test"
+    , "name": "TruJS.simpleViewSystem"
+
+    , "format": "browser"
+
+    , "moduleFile": "app.js"
+    , "moduleName": "SVS"
+    , "testFile": "browser-test.js"
+
+    , "output": "./build/{name}/browser-test.js"
+}]

@@ -1,0 +1,7 @@
+{
+    "missingMainTemplate": "[MissingMainTemplate] The property '{name}' does not exist in the 'templates' collection."
+    , "missingMainContext": "[MissingMainContext] The property '{name}' does not exist in the state object."
+    , "missingMainController": "[MissingMainController] The property '{name}' does not exist in the controllers collection"
+    , "missingController": "[MissingController] The name '{name}' does not exist in the controllers collection."
+    , "missingChildState": "[MissingChildState] The child state '{name}' was not found in the views's context."
+}

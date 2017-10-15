@@ -1,0 +1,15 @@
+{
+    "root": [{ "TruJS": [":TruJS"] }]
+    , "promise": [":Promise"]
+    , "setTimeout": [":setTimeout"]
+    , "createElement": [".document.createElement", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
+    , "createTextNode": [".document.createTextNode", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
+    , "simpleErrors": ["TruJS.simpleViewSystem.SimpleErrors", [], false]
+    , "simpleDefaults": ["TruJS.simpleViewSystem.SimpleDefaults", [], false]
+    , "simpleExpression": ["TruJS.simpleViewSystem._SimpleExpression", []]
+    , "simpleTemplate": ["TruJS.simpleViewSystem._SimpleTemplate", []]
+    , "simpleStyle": ["TruJS.simpleViewSystem._SimpleStyle", []]
+    , "simpleWatcher": ["TruJS.simpleViewSystem._SimpleWatcher", []]
+    , "simpleView": ["TruJS.simpleViewSystem._SimpleView", []]
+    , "simpleViewPort": ["TruJS.simpleViewSystem._SimpleViewPort", []]
+}
