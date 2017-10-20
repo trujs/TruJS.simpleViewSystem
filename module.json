@@ -14,6 +14,7 @@
     , "simpleTemplate": ["TruJS.simpleViewSystem._SimpleTemplate", []]
     , "simpleStyle": ["TruJS.simpleViewSystem._SimpleStyle", []]
     , "simpleWatcher": ["TruJS.simpleViewSystem._SimpleWatcher", []]
+    , "findWatcher": [".simpleWatcher.findWatcher"]
     , "simpleView": ["TruJS.simpleViewSystem._SimpleView", []]
     , "simpleViewPort": ["TruJS.simpleViewSystem._SimpleViewPort", []]
 }

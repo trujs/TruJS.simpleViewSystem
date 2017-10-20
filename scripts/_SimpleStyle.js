@@ -3,7 +3,7 @@
 * object
 * @factory
 */
-function _SimpleStyle(createElement, createTextNode) {
+function _SimpleStyle(createElement, createTextNode, findWatcher) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , cnsts = {
         "destroy": "$destroy"
@@ -20,10 +20,11 @@ function _SimpleStyle(createElement, createTextNode) {
         var watchers = [];
 
         template.replace(TAG_PATT, function (tag, key) {
-            var obj = resolvePath(key, context);
+            var obj = resolvePath(key, context)
+            , watcher = findWatcher(obj.parent, obj.index);
             //add a watch
-            if (obj.parent.hasOwnProperty(cnsts.watch)) {
-                watchers.push({ "key": obj.index, "parent": obj.parent });
+            if (!!watcher) {
+                watchers.push({ "key": obj.index, "parent": watcher });
             }
         });
 

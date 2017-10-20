@@ -8,7 +8,7 @@
 * 5. Bind input tags
 * @factory
 */
-function _SimpleTemplate(promise, createElement, simpleExpression) {
+function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^[ \t\n\r]+$/
     , cnsts = {
@@ -346,12 +346,14 @@ function _SimpleTemplate(promise, createElement, simpleExpression) {
         var watchers = [];
 
         keys.forEach(function forEachKey(key) {
-            var obj = resolvePath(key, context), guids;
-            if (obj.parent.hasOwnProperty(cnsts.watch)) {
+            var obj = resolvePath(key, context)
+            , guids
+            , watcher = findWatcher(obj.parent, obj.index);
+            if (!!watcher) {
                 watchers.push({
                     "key": obj.index
-                    , "parent": obj.parent
-                    , "guids": obj.parent[cnsts.watch](obj.index, handler)
+                    , "parent": watcher
+                    , "guids": watcher[cnsts.watch](obj.index, handler)
                 });
             }
         });
