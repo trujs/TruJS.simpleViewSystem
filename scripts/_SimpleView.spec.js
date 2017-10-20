@@ -1,4 +1,4 @@
-/**[@test({ "title": "TruJS.view._SimpleView: " })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleView: " })]*/
 function testSimpleView(arrange, act, assert, callback, element, module) {
     var mainState, mainHtml, controllers, simpleView, el, controller, context, renderCb, err;
 
@@ -20,7 +20,7 @@ function testSimpleView(arrange, act, assert, callback, element, module) {
                 render("<div>{:name:}</div>");
             })
         };
-        simpleView = module(["TruJS.view._SimpleView", [controllers]]);
+        simpleView = module(["TruJS.simpleViewSystem._SimpleView", [controllers]]);
         el = element('main')();
         controller = controllers["main"] ;
         context = {
@@ -58,8 +58,6 @@ function testSimpleView(arrange, act, assert, callback, element, module) {
         test("controllers.mainbody should be called once")
         .value(controllers.mainbody)
         .hasBeenCalled(1);
-
-        console.log(el);
 
     });
 }

@@ -1,5 +1,5 @@
-/**[@test({ "title": "TruJS.view._SimpleViewPort: success" })]*/
-function testSimpleViewPort(arrange, act, assert, callback, module) {
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleViewPort: success" })]*/
+function testSimpleViewPort1(arrange, act, assert, callback, module) {
     var simpleViewPort, templates, controllers, watcher, simpleTemplate, simpleView, viewport, state, renderedCb, elements, err;
 
     arrange(function () {
@@ -21,7 +21,7 @@ function testSimpleViewPort(arrange, act, assert, callback, module) {
             "innerHTML": "test"
             , "appendChild": callback()
         };
-        simpleViewPort = module(["TruJS.view._SimpleViewPort", [templates, controllers, watcher, simpleTemplate, simpleView]]);
+        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [templates, controllers, watcher, simpleTemplate, simpleView]]);
     });
 
     act(function (done) {
@@ -88,8 +88,8 @@ function testSimpleViewPort(arrange, act, assert, callback, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleViewPort: missing state" })]*/
-function testSimpleViewPort(arrange, act, assert, callback, module) {
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleViewPort: missing state" })]*/
+function testSimpleViewPort2(arrange, act, assert, callback, module) {
     var simpleViewPort, templates, state, renderedCb, err;
 
     arrange(function () {
@@ -99,7 +99,7 @@ function testSimpleViewPort(arrange, act, assert, callback, module) {
         state = {
             "nomain": {}
         };
-        simpleViewPort = module(["TruJS.view._SimpleViewPort", [templates, "", "", "", "", ""]]);
+        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [templates, "", "", "", "", ""]]);
     });
 
     act(function (done) {
@@ -118,8 +118,8 @@ function testSimpleViewPort(arrange, act, assert, callback, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleViewPort: missing controller" })]*/
-function testSimpleViewPort(arrange, act, assert, callback, module) {
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleViewPort: missing controller" })]*/
+function testSimpleViewPort3(arrange, act, assert, callback, module) {
     var simpleViewPort, templates, state, controller, renderedCb, err;
 
     arrange(function () {
@@ -132,7 +132,7 @@ function testSimpleViewPort(arrange, act, assert, callback, module) {
         controller = {
             "nomain": {}
         };
-        simpleViewPort = module(["TruJS.view._SimpleViewPort", [templates, controller, "", "", "", ""]]);
+        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [templates, controller, "", "", "", ""]]);
     });
 
     act(function (done) {

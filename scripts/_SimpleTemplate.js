@@ -18,6 +18,9 @@ function _SimpleTemplate(promise, createElement, simpleExpression) {
         , "value": "value"
         , "repeat": "repeat"
         , "if": "if"
+        , "destroy": "$destroy"
+        , "watch": "$watch"
+        , "unwatch": "$unwatch"
     }
     ;
 
@@ -54,6 +57,8 @@ function _SimpleTemplate(promise, createElement, simpleExpression) {
     function processElement(element, context) {
         //set the element on the context
         context["$element"] = element;
+        //a temporary container for watchers
+        element.watchers = [];
         //see if this is a repeat
         if (element.nodeName === "REPEAT") {
             processRepeatElement(element, context);
@@ -81,6 +86,16 @@ function _SimpleTemplate(promise, createElement, simpleExpression) {
                 }
             }
         }
+
+        //add the destroy function
+        var watchers = element.watchers;
+        delete element.watchers;
+        element[cnsts.destroy] = function destroy() {
+            watchers.forEach(function (watcher) {
+                watcher.parent[cnsts.unwatch](watcher.guids);
+            });
+        };
+
     }
     /**
     * Resolves the repeat expression, creats a context chain, and then processes
@@ -160,7 +175,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression) {
         ;
 
         if (result.keys.length > 0) {
-            watchKeys(context, result.keys, function () {
+            watchKeys(textNode, context, result.keys, function () {
                 textNode.nodeValue = processValue(value, context).value;
             });
         }
@@ -217,13 +232,13 @@ function _SimpleTemplate(promise, createElement, simpleExpression) {
                 //
                 //});
                 //add watcher
-                watchKeys(context, result.keys, function () {
+                watchKeys(element, context, result.keys, function () {
                     setAttribute(processValue(expr, context).value);
                 });
             }
             else {
                 //add the watch handler for each key
-                watchKeys(context, result.keys, function watchHandler(key, value) {
+                watchKeys(element, context, result.keys, function watchHandler(key, value) {
                     setAttribute(processValue(expr, context).value);
                 });
             }
@@ -327,16 +342,21 @@ function _SimpleTemplate(promise, createElement, simpleExpression) {
     * Adds the watch `handler` for each key, if it's parent is a watcher
     * @function
     */
-    function watchKeys(context, keys, handler) {
+    function watchKeys(element, context, keys, handler) {
+        var watchers = [];
+
         keys.forEach(function forEachKey(key) {
-            var obj = resolvePath(key, context);
-            if (!!context.$watch) {
-                context.$watch(key, handler);
-            }
-            else if (!!obj.parent.$watch) {
-                obj.parent.$watch(obj.index, handler);
+            var obj = resolvePath(key, context), guids;
+            if (obj.parent.hasOwnProperty(cnsts.watch)) {
+                watchers.push({
+                    "key": obj.index
+                    , "parent": obj.parent
+                    , "guids": obj.parent[cnsts.watch](obj.index, handler)
+                });
             }
         });
+
+        element.watchers = element.watchers.concat(watchers);
     }
     /**
     * Processes each childNode of the element
