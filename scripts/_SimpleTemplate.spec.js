@@ -1,9 +1,9 @@
-/**[@test({ "title": "TruJS.view._SimpleTemplate: simple multi children template "})]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: simple multi children template "})]*/
 function testSimpleTemplate1(arrange, act, assert, callback, module) {
     var simpleTemplate, template, data, res;
 
     arrange(function () {
-        simpleTemplate = module(["TruJS.view._SimpleTemplate", []]);
+        simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
         template = [
             "<div class='{:getTitleClass($element):}'>"
             , "{:title:}"
@@ -67,12 +67,12 @@ function testSimpleTemplate1(arrange, act, assert, callback, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleTemplate: conditional statements "})]*/
-function testSimpleTemplate1(arrange, act, assert, callback, module) {
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: conditional statements "})]*/
+function testSimpleTemplate2(arrange, act, assert, callback, module) {
     var simpleTemplate, template, data, res;
 
     arrange(function () {
-        simpleTemplate = module(["TruJS.view._SimpleTemplate", []]);
+        simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
         template = [
             "<div>"
             , "<if expr=\"{:obj is [object]:}\">"
@@ -115,3 +115,46 @@ function testSimpleTemplate1(arrange, act, assert, callback, module) {
     });
 }
 
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: destroy "})]*/
+function testSimpleTemplate3(arrange, act, assert, callback, module) {
+    var watcher, simpleTemplate, template, context, elements;
+
+    arrange(function () {
+        watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
+        template = [
+            "<div class=\"{:str2:}\">"
+            , "{:str1:}"
+            , "</div>"
+        ].join("\n");
+        context = watcher({
+            "obj": {}
+            , "str1": "Title"
+            , "str2": "card"
+        });
+    });
+
+    act(function () {
+        try {
+            elements = simpleTemplate(template, context);
+            elements[0].$destroy();
+            context.str1 = "Sub Title";
+            context.str1 = "table";
+        }
+        catch(ex) {
+            elements = ex;
+        }
+    });
+
+    assert(function (test) {
+        test("elements should not be an error")
+        .value(elements)
+        .not()
+        .isError();
+
+        test("elements[0] should be")
+        .value(elements, "[0].outerHTML")
+        .equals("<div class=\"card\">\nTitle\n</div>");
+
+    });
+}

@@ -15,12 +15,12 @@ function smplExprHelper(callback) {
     };
 }
 
-/**[@test({ "title": "TruJS.view._SimpleExpression: conditional expressions w/ functions" })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: conditional expressions w/ functions" })]*/
 function testSimpleExpression1(arrange, act, assert, smplExprHelper, module) {
     var simpleExpression, expr, res;
 
     arrange(function () {
-        simpleExpression = module(["TruJS.view._SimpleExpression", []]);
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
         expr = [
             "num3() === str.length"
             , "str[1] == obj1.key2"
@@ -107,12 +107,12 @@ function testSimpleExpression1(arrange, act, assert, smplExprHelper, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleExpression: iterator for array" })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator for array" })]*/
 function testSimpleExpression2(arrange, act, assert, smplExprHelper, module) {
     var simpleExpression, expr, iter, res;
 
     arrange(function () {
-        simpleExpression = module(["TruJS.view._SimpleExpression", []]);
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
         expr = "val in str";
         res = [];
     });
@@ -145,12 +145,12 @@ function testSimpleExpression2(arrange, act, assert, smplExprHelper, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleExpression: iterator for array w/ sort by key desc" })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator for array w/ sort by key desc" })]*/
 function testSimpleExpression3(arrange, act, assert, smplExprHelper, module) {
     var simpleExpression, expr, iter, res;
 
     arrange(function () {
-        simpleExpression = module(["TruJS.view._SimpleExpression", []]);
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
         expr = "val in str sort val desc";
         res = [];
     });
@@ -178,12 +178,12 @@ function testSimpleExpression3(arrange, act, assert, smplExprHelper, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleExpression: iterator for array w/ sort by value" })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator for array w/ sort by value" })]*/
 function testSimpleExpression4(arrange, act, assert, smplExprHelper, module) {
     var simpleExpression, expr, iter, res;
 
     arrange(function () {
-        simpleExpression = module(["TruJS.view._SimpleExpression", []]);
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
         expr = "$key in objAr sort num";
         res = [];
     });
@@ -211,12 +211,12 @@ function testSimpleExpression4(arrange, act, assert, smplExprHelper, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleExpression: iterator for object" })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator for object" })]*/
 function testSimpleExpression5(arrange, act, assert, smplExprHelper, module) {
     var simpleExpression, expr, iter, res;
 
     arrange(function () {
-        simpleExpression = module(["TruJS.view._SimpleExpression", []]);
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
         expr = "$key in obj1 sort $key desc";
         res = [];
     });
@@ -244,12 +244,12 @@ function testSimpleExpression5(arrange, act, assert, smplExprHelper, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.view._SimpleExpression: function, no parentheses" })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: function, no parentheses" })]*/
 function testSimpleExpression5(arrange, act, assert, smplExprHelper, module) {
     var simpleExpression, expr, res;
 
     arrange(function () {
-        simpleExpression = module(["TruJS.view._SimpleExpression", []]);
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
         expr = "num3";
     });
 

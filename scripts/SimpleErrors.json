@@ -4,4 +4,5 @@
     , "missingMainController": "[MissingMainController] The property '{name}' does not exist in the controllers collection"
     , "missingController": "[MissingController] The name '{name}' does not exist in the controllers collection."
     , "missingChildState": "[MissingChildState] The child state '{name}' was not found in the views's context."
+    , "missingProperty": "[MissingProperty] The property '{key}' does not exist in this object."
 }

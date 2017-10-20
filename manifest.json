@@ -25,5 +25,5 @@
     , "moduleName": "SVS"
     , "testFile": "browser-test.js"
 
-    , "output": "./build/{name}/browser-test.js"
+    , "output": "./build/{name}/"
 }]
