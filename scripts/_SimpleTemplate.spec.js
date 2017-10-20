@@ -137,9 +137,10 @@ function testSimpleTemplate3(arrange, act, assert, callback, module) {
     act(function () {
         try {
             elements = simpleTemplate(template, context);
+
             elements[0].$destroy();
             context.str1 = "Sub Title";
-            context.str1 = "table";
+            context.str2 = "table";
         }
         catch(ex) {
             elements = ex;

@@ -40,14 +40,19 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
     function process(element, data) {
         //create the starting context object and start processing the main
         // element
-        processElement(element, createContext(data));
+        processElement(element, createContext(data, element));
     }
     /**
     * Create the context object, making data the prototype
     * @function
     */
-    function createContext(data) {
-        return Object.create(data);
+    function createContext(data, element) {
+        return Object.create(data, {
+            "$parentElement": {
+                "enumerable": true
+                , "value": element
+            }
+        });
     }
     /**
     * Processes the element including special tags, if and repeat, and
@@ -87,15 +92,8 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
             }
         }
 
-        //add the destroy function
-        var watchers = element.watchers;
-        delete element.watchers;
-        element[cnsts.destroy] = function destroy() {
-            watchers.forEach(function (watcher) {
-                watcher.parent[cnsts.unwatch](watcher.guids);
-            });
-        };
-
+        //create the destroy method
+        createDestroyMethod(element);
     }
     /**
     * Resolves the repeat expression, creats a context chain, and then processes
@@ -379,6 +377,27 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
             while((node = sibling));
         }
         return element.childNodes;
+    }
+    /**
+    * Creates the closure that destroys the element and it's children
+    * @function
+    */
+    function createDestroyMethod(element) {
+        //add the destroy function
+        var watchers = element.watchers;
+        delete element.watchers;
+        element[cnsts.destroy] = function destroy() {
+            //destroy the elements watchers
+            watchers.forEach(function (watcher) {
+                watcher.parent[cnsts.unwatch](watcher.guids);
+            });
+            //run the destroy on the children
+            for (var i = 0, l = element.childNodes.length; i < l; i++) {
+                if (element.childNodes[i].hasOwnProperty(cnsts.destroy)) {
+                    element.childNodes[i][cnsts.destroy]();
+                }
+            }
+        };
     }
 
     /**
