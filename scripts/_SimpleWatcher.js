@@ -257,6 +257,26 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     function isWatcher(obj) {
         return isObject(obj) && Object.getPrototypeOf(obj) === self || false;
     }
+    /**
+    * Looks through the prototype chain to find the true watcher object and then
+    * tests if the key is a property of the watcher
+    * @function
+    */
+    function findWatcher(obj, key) {
+        //loop through the prototype chain
+        while(!isWatcher(obj) && !obj.hasOwnProperty(key)) {
+            obj = Object.getPrototypeOf(obj);
+            if (obj.constructor === Object) {
+                break;
+            }
+        }
+        //if the object has a watch and the key then return the object
+        if (obj.hasOwnProperty(cnsts.watch) && obj.hasOwnProperty(key)) {
+            return obj;
+        }
+
+        return null;
+    }
 
     /**
     * @worker
@@ -276,6 +296,8 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     self = SimpleWatcher;
     //add the isWatcher function
     self.isWatcher = isWatcher;
+    //add the find watcher function
+    self.findWatcher = findWatcher;
 
     //return the watcher
     return SimpleWatcher;
