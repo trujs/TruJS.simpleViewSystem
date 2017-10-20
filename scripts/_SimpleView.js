@@ -83,23 +83,14 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
                 //create the state context
                 view.stateContext = createStateContext(view);
 
-                //add the style element
-                if (!!view.cssTemplate) {
-                    view.children.push(
-                        simpleStyle(view.cssTemplate, view.stateContext)
-                    );
-                }
-
                 //clear the element contents
                 view.element.innerHTML = "";
 
                 //if we have am html template then process it
                 if (!!view.htmlTemplate) {
                     //process the html and get the elements
-                    view.children = view.children.concat(
-                        Array.prototype.slice.apply(
-                            simpleTemplate(view.htmlTemplate, view.stateContext)
-                        )
+                    view.children = Array.prototype.slice.apply(
+                        simpleTemplate(view.htmlTemplate, view.stateContext)
                     );
                 }
 
@@ -112,8 +103,17 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
                         , view.renderCb
                     );
                 }
-                //otherwise we need to call the render function
-                else {
+
+                //add the style element
+                if (!!view.cssTemplate) {
+                    view.children.push(
+                        simpleStyle(view.cssTemplate, view.stateContext)
+                    );
+                }
+
+                //if there isn't an html template then we'll need to fire then
+                // call the render callback
+                if (!view.htmlTemplate) {
                     view.renderCb();
                 }
             }
