@@ -94,6 +94,13 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
                     );
                 }
 
+                //add the style element
+                if (!!view.cssTemplate) {
+                    view.children.push(
+                        simpleStyle(view.cssTemplate, view.stateContext)
+                    );
+                }
+
                 //if we have elements then process them
                 if (!isEmpty(view.children)) {
                     appendElements(view);
@@ -101,13 +108,6 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
                         view.children
                         , view.state
                         , view.renderCb
-                    );
-                }
-
-                //add the style element
-                if (!!view.cssTemplate) {
-                    view.children.push(
-                        simpleStyle(view.cssTemplate, view.stateContext)
                     );
                 }
 
