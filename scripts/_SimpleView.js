@@ -8,6 +8,8 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
     , simpleView
     , cnsts = {
         "destroy": "$destroy"
+        , "watch": "$watch"
+        , "unwatch": "$unwatch"
     }
     ;
 
