@@ -63,6 +63,7 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
             simpleViewHelper.state.toolbar1.title = "Sub Title";
             setTimeout(function () {
                 view.$destroy();
+                simpleViewHelper.state.toolbar1.title = "New Title";
                 done();
             }, 10);
         });
@@ -102,7 +103,7 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
 
         test("mainEl innerHTML should be")
         .value(simpleViewHelper.mainEl.innerHTML)
-        .equals("<toolbar id=\"toolbar1\"><div>Title</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody><div>Name</div></mainbody><div></div>");
+        .equals("<toolbar id=\"toolbar1\"><div>Sub Title</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody><div>Name</div></mainbody><div></div>");
 
     });
 }
