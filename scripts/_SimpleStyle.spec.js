@@ -10,10 +10,15 @@ function testSimpleStyle1(arrange, act, assert, module) {
             , "background-color: {:colors.blue:};"
             , "}"
         ].join("\n");
-        context = watcher({
-            "$tagName": "div"
-            , "colors": {
+
+        context = Object.create(watcher({
+            "colors": {
                 "blue": "#0000ff"
+            }
+        }), {
+            "$tagName": {
+                "enumerable": true
+                , "value": "div"
             }
         });
     });
@@ -26,7 +31,7 @@ function testSimpleStyle1(arrange, act, assert, module) {
 
         style.$destroy();
 
-        context.$tagName = "span";
+        context.colors.blue = "green";
 
         cssText3 = style.innerText;
     });

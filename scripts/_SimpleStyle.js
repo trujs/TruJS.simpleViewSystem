@@ -22,7 +22,7 @@ function _SimpleStyle(createElement, createTextNode) {
         template.replace(TAG_PATT, function (tag, key) {
             var obj = resolvePath(key, context);
             //add a watch
-            if (!!obj.parent.$watch) {
+            if (obj.parent.hasOwnProperty(cnsts.watch)) {
                 watchers.push({ "key": obj.index, "parent": obj.parent });
             }
         });
