@@ -1,8 +1,9 @@
 /**[@test({ "label": "simpleViewHelper", "type": "factory" })]*/
-function simpleViewHelper(callback, element, module) {
-    var watcher, mainHtml, controllers, mainBodyContext, toolbarWatchers;
+function simpleViewHelper(callback, module) {
+    var watcher, mainHtml, controllers, mainBodyContext, toolbarWatchers, createElement;
 
     watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+    createElement = module(".createElement");
     mainHtml = [
         "<toolbar id='toolbar1'></toolbar>"
         , "<mainbody></mainbody>"
@@ -23,7 +24,7 @@ function simpleViewHelper(callback, element, module) {
             render(mainHtml, {});
         })
         , "toolbar": callback(function (render, state) {
-            render("<div>{:title:}</div>");
+            render(["<div>{:title:}</div>", "{:$tagName:} { background-color: blue; }"]);
             return toolbarWatchers;
         })
         , "mainbody": callback(function (render, state) {
@@ -33,7 +34,7 @@ function simpleViewHelper(callback, element, module) {
 
     return {
         "controllers": controllers
-        , "mainEl": element('main')()
+        , "mainEl": createElement('main')
         , "simpleView": module(["TruJS.simpleViewSystem._SimpleView", [controllers]])
         , "state": watcher({
             "toolbar1": {
@@ -62,8 +63,8 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
             simpleViewHelper.state.toolbar1.title = "Sub Title";
             setTimeout(function () {
                 view.$destroy();
+                done();
             }, 10);
-            done(20);
         });
 
         view = simpleViewHelper.simpleView(
@@ -98,6 +99,10 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
         test("mainBodyContext.$destroy should be called once")
         .value(simpleViewHelper.mainBodyContext.$destroy)
         .hasBeenCalled(1);
+
+        test("mainEl innerHTML should be")
+        .value(simpleViewHelper.mainEl.innerHTML)
+        .equals("<toolbar id=\"toolbar1\"><div>Title</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody><div>Name</div></mainbody><div></div>");
 
     });
 }
