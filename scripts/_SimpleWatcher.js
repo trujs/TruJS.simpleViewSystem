@@ -239,9 +239,17 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     * @function
     */
     function fireHandlers(handlers, key, value) {
+        var handlerList = [];
+
+        //loop through the handlers, creating an array
+        // this is needed because firing one handler might destroy the next
         Object.keys(handlers).forEach(function forEachHandler(handlerKey) {
+             handlerList.push(handlers[handlerKey]);
+        });
+
+        //fire each handler
+        handlerList.forEach(function forEachHandler(handler) {
             try {
-                var handler = handlers[handlerKey];
                 handler.apply(null, [key, value]);
             }
             catch(ex) {
