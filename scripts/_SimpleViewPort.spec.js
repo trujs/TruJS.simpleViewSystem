@@ -29,7 +29,7 @@ function testSimpleViewPort1(arrange, act, assert, callback, module) {
             err = error;
             done();
         });
-        simpleViewPort(viewport, state, renderedCb);
+        simpleViewPort(viewport, null, state, renderedCb);
     });
 
     assert(function (test) {
@@ -107,7 +107,7 @@ function testSimpleViewPort2(arrange, act, assert, callback, module) {
             err = error;
             done();
         });
-        simpleViewPort("", state, renderedCb);
+        simpleViewPort("", null, state, renderedCb);
     });
 
     assert(function (test) {
@@ -140,7 +140,7 @@ function testSimpleViewPort3(arrange, act, assert, callback, module) {
             err = error;
             done();
         });
-        simpleViewPort("", state, renderedCb);
+        simpleViewPort("", null, state, renderedCb);
     });
 
     assert(function (test) {
