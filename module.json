@@ -11,6 +11,7 @@
     , "simpleErrors": ["TruJS.simpleViewSystem.SimpleErrors", [], false]
     , "simpleDefaults": ["TruJS.simpleViewSystem.SimpleDefaults", [], false]
     , "simpleExpression": ["TruJS.simpleViewSystem._SimpleExpression", []]
+    , "simpleMixin": ["TruJS.simpleViewSystem._SimpleMixin", []]
     , "simpleTemplate": ["TruJS.simpleViewSystem._SimpleTemplate", []]
     , "simpleStyle": ["TruJS.simpleViewSystem._SimpleStyle", []]
     , "simpleWatcher": ["TruJS.simpleViewSystem._SimpleWatcher", []]
