@@ -6,6 +6,7 @@
     , "newGuid": [".string.newGuid"]
     , "array": ["TruJS._Array", []]
     , "arrayOfType": [".array.ofType"]
+    , "funcAsync": ["TruJS.func._Async", []]
     , "createElement": [".document.createElement", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
     , "createTextNode": [".document.createTextNode", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
     , "simpleErrors": ["TruJS.simpleViewSystem.SimpleErrors", [], false]
