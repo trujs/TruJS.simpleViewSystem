@@ -3,13 +3,14 @@
 * calls the controller
 * @factory
 */
-function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
+function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, funcAsync, newGuid) {
     var LD_PATH = /[_]/g
     , simpleView
     , cnsts = {
         "destroy": "$destroy"
         , "watch": "$watch"
         , "unwatch": "$unwatch"
+        , "value": "$value"
     }
     ;
 
@@ -35,7 +36,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
             }
             , "$tagId": {
                 "enumerable": true
-                , "value": view.element.id
+                , "value": !!view.element.id && view.element.id || (view.element.id = newGuid(true))
             }
             , "$tagClass": {
                 "enumerable": true
@@ -49,7 +50,8 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
     */
     function createRenderClosure(view) {
 
-        return function render(template, context) {
+        //the render function
+        function render(template, context) {
             try {
                 //destroy the old context if we have a new one
                 if (!!context) {
@@ -111,8 +113,13 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
                     );
                 }
 
-                //if there isn't an html template then we'll need to fire then
-                // call the render callback
+                //if there is a $render function on the context then fire it
+                if (view.context.hasOwnProperty("$render")) {
+                    funcAsync(view.context["$render"], [view]);
+                }
+
+                //if there isn't an html template then we'll need to fire the
+                // the render callback
                 if (!view.htmlTemplate) {
                     view.renderCb();
                 }
@@ -121,6 +128,11 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
                 view.renderCb(ex);
             }
         };
+
+        //add the view object to the render function
+        render.view = view;
+
+        return render;
     }
     /**
     * Loops through the elements and processes any tags that appear in the
@@ -142,8 +154,8 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
 
         elements.every(function forEachElement(element) {
             var name = getElementName(element)
-            , id = element.id || name
-            , controller = resolvePath(name, controllers).value
+            , id = element.id || generateId(name)
+            , controller = resolvePath(name.replace(/-/g, "."), controllers).value
             , childState = getChildState(id, state)
             ;
 
@@ -173,6 +185,21 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
         });
 
         return views;
+    }
+    /**
+    * Converts the tag name to camal case
+    * @function
+    */
+    function generateId(name) {
+        var segs = name.split("-")
+        , id = segs[0];
+
+        for(var i = 1, l = segs.length; i < l; i++) {
+            var seg = segs[i];
+            id+= seg[0].toUpperCase() + seg.substring(1);
+        }
+
+        return id;
     }
     /**
     * Appends the elements to the element parent
@@ -267,6 +294,20 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
             });
         }
     }
+    /**
+    * Creates a key value pair for each attribute
+    * @function
+    */
+    function getAttributes(element) {
+        var attributes = {};
+
+        for (var i = 0, l = element.attributes.length; i < l; i++) {
+            var attr = element.attributes[i];
+            attributes[attr.name] = attr[cnsts.value] || attr.value;
+        }
+
+        return attributes;
+    }
 
     /**
     * @worker
@@ -279,7 +320,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle) {
                 , "name": getElementName(element)
                 , "state": state
                 , "controller": controller
-                , "attributes": Array.prototype.slice.apply(element.attributes)
+                , "attributes": getAttributes(element)
                 , "children": []
                 , "views": []
                 , "watchers": []

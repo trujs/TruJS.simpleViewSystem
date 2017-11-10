@@ -6,7 +6,7 @@ function simpleViewHelper(callback, module) {
     createElement = module(".createElement");
     mainHtml = [
         "<toolbar id='toolbar1'></toolbar>"
-        , "<mainbody></mainbody>"
+        , "<mainbody id='mainbody'></mainbody>"
         , "<div></div>"
     ].join("\n");
 
@@ -103,7 +103,7 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
 
         test("mainEl innerHTML should be")
         .value(simpleViewHelper.mainEl.innerHTML)
-        .equals("<toolbar id=\"toolbar1\"><div>Sub Title</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody><div>Name</div></mainbody><div></div>");
+        .equals("<toolbar id=\"toolbar1\"><div>Sub Title</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody id=\"mainbody\"><div>Name</div></mainbody><div></div>");
 
     });
 }
