@@ -8,16 +8,15 @@
 * 5. Bind input tags
 * @factory
 */
-function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) {
+function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, simpleMixin) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^[ \t\n\r]+$/
+    , TRIM_PATT = /^[\n\r\t ]+(.*?)[\n\r\t ]+$/
+    , LN_END_PATT = /\r?\n/g
     , cnsts = {
-        "bind": "bind"
-        , "input": "INPUT"
+        "input": "INPUT"
         , "select": "SELECT"
-        , "value": "value"
-        , "repeat": "repeat"
-        , "if": "if"
+        , "value": "$value"
         , "destroy": "$destroy"
         , "watch": "$watch"
         , "unwatch": "$unwatch"
@@ -79,12 +78,14 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
             processTextNode(element, context)
         }
         else {
-            if (element.hasAttribute(cnsts.repeat)) {
+            if (element.hasAttribute("repeat")) {
                 processRepeatAttrib(element, context);
             }
             else {
                 processAttributes(element, context);
                 processChildren(element, context);
+                //add any mixins
+                simpleMixin(element, context);
                 //this is a work around for the proper option to be selected
                 if (element.tagName === cnsts.select) {
                     element.innerHTML = element.innerHTML;
@@ -118,10 +119,10 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
     function processRepeatAttrib(element, context) {
         var parentTag = element.parentNode.tagName
         , template
-        , expr = element.getAttribute(cnsts.repeat)
+        , expr = element.getAttribute("repeat")
         ;
         //remove the repeat attribute
-        element.removeAttribute(cnsts.repeat);
+        element.removeAttribute("repeat");
         //set the innerHTML
         template = element.outerHTML
         //execute the repeat
@@ -146,18 +147,21 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
         }
         //if pass then use the if children
         if (pass) {
-            nodes = processChildren(element, context);
-            insertNodes(element, nodes);
+            nodes = insertNodes(element, element.childNodes);
         }
         //process the else
         if (!!elseEl && elseEl.nodeName === "ELSE") {
             //if not pass then use the else children
             if (!pass) {
-                nodes = processChildren(elseEl, context);
-                insertNodes(elseEl, nodes);
+                nodes = insertNodes(element, elseEl.childNodes);
             }
         }
-
+        //process the nodes
+        if (!!nodes) {
+            nodes.forEach(function forEachNode(node) {
+                processElement(node, context);
+            });
+        }
         //remove the if
         element.parentNode.removeChild(element);
     }
@@ -167,19 +171,34 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
     */
     function processTextNode(textNode, context) {
         //get the text node's value
-        var value =  textNode.nodeValue
+        var value =  textNode.nodeValue.replace(TRIM_PATT, "$1")
         //process the value and see if we have any keys
         , result = processValue(value, context)
+        //reference to the parent element
+        , parent = textNode.parentNode
+        //create/get an el tag to hold the text
+        , el = isEmpty(value) && null
+            || parent.childNodes.length === 1 && parent
+            || createElement('span')
         ;
 
-        if (result.keys.length > 0) {
-            watchKeys(textNode, context, result.keys, function () {
-                textNode.nodeValue = processValue(value, context).value;
-            });
-        }
+        if (!isEmpty(value)) {
+            //replace the text node with the el
+            if (el !== parent) {
+                el.watchers = [];
+                parent.replaceChild(el, textNode);
+            }
 
-        //set the node value to the result
-        textNode.nodeValue = result.value;
+            //set the node value to the result
+            el.innerHTML = result.value.replace(LN_END_PATT, "<br>");
+
+            //add the watchers
+            if (result.keys.length > 0) {
+                watchKeys(el, context, result.keys, function () {
+                    el.innerHTML = processValue(value, context).value;
+                });
+            }
+        }
     }
     /**
     * Processes each attribute of the element
@@ -221,31 +240,26 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
         , name = attr.name
         , result = processValue(attr.value, context);
 
-        if(result.keys.length > 0 && attr.name !== "value") {
-            //if the attributes name is bind and the element is an input
-            // then add a change listener
-            if (attr.name === cnsts.bind && element.tagName === cnsts.input) {
-                //add change listener
-                //element.addEventListener("change", function (e) {
-                //
-                //});
-                //add watcher
-                watchKeys(element, context, result.keys, function () {
-                    setAttribute(processValue(expr, context).value);
-                });
-            }
-            else {
-                //add the watch handler for each key
-                watchKeys(element, context, result.keys, function watchHandler(key, value) {
-                    setAttribute(processValue(expr, context).value);
-                });
-            }
+        //add the watch handler for each key
+        if(result.keys.length > 0) {
+            watchKeys(element, context, result.keys, function watchHandler(key, value) {
+                setAttribute(processValue(expr, context));
+            });
         }
 
-        setAttribute(result.value);
+        setAttribute(result);
 
-        function setAttribute(value) {
-            if (!isNill(value)) {
+        function setAttribute(result) {
+            var value = result.value;
+            //if the values array has only one, then use that
+            if (!result.hybrid && result.values.length === 1) {
+                value = result.values[0];
+            }
+            if (isObject(value) || isFunc(value)) {
+                element.getAttributeNode(attr.name)[cnsts.value] = value;
+                element.setAttribute(name, "$value");
+            }
+            else if (!isNill(value)) {
                 element.setAttribute(name, value);
             }
             else {
@@ -309,10 +323,11 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
         nodes = Array.prototype.slice.apply(nodes);
         //loop over the nodes an insert before
         nodes.forEach(function forEachNode(node) {
-            if (node.nodeType !== 3 || !WSP_PATT.test(node.nodeValue)) {
-                parent.insertBefore(node, beforeEl);
-            }
+            //if (node.nodeType !== 3 || !WSP_PATT.test(node.nodeValue)) {
+            parent.insertBefore(node, beforeEl);
+            //}
         });
+        return nodes;
     }
     /**
     * Finds all {:expressions:}, evaluates them, and then replaces the
@@ -322,11 +337,17 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
     function processValue(value, context) {
         var result = {
             "keys": []
+            , "values": []
+            , "hybrid": !!value.replace(TAG_PATT, "")
         };
 
         result.value = value.replace(TAG_PATT, function forEachMatch(tag, expr) {
             var expr = simpleExpression(expr, context);
             result.keys = result.keys.concat(expr.keys);
+            result.values.push(expr.result);
+            if (isObject(expr.result) || isFunc(expr.result)) {
+                return "";
+            }
             return expr.result;
         });
 
@@ -367,10 +388,10 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
         if (!!node) {
             do {
                 sibling = node.nextSibling;
-                if (node.nodeType !== 3 || !WSP_PATT.test(node.nodeValue)) {
+                if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
                     processElement(node, context);
                 }
-                else {
+                else if (!!node.parentNode){
                     node.parentNode.removeChild(node);
                 }
             }
@@ -391,13 +412,24 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher) 
             watchers.forEach(function (watcher) {
                 watcher.parent[cnsts.unwatch](watcher.guids);
             });
-            //run the destroy on the children
-            for (var i = 0, l = element.childNodes.length; i < l; i++) {
-                if (element.childNodes[i].hasOwnProperty(cnsts.destroy)) {
-                    element.childNodes[i][cnsts.destroy]();
-                }
-            }
+            //destroy the children
+            destroyChildren(element);
         };
+    }
+    /**
+    * Loops through and destroys the child nodes
+    * @function
+    */
+    function destroyChildren(element) {
+        //run the destroy on the children or decend
+        for (var i = 0, l = element.childNodes.length; i < l; i++) {
+            if (element.childNodes[i].hasOwnProperty(cnsts.destroy)) {
+                element.childNodes[i][cnsts.destroy]();
+            }
+            else {
+                destroyChildren(element.childNodes[i]);
+            }
+        }
     }
 
     /**
