@@ -44,7 +44,7 @@ function testSimpleTemplate1(arrange, act, assert, callback, module) {
 
         test("res[0] should be")
         .value(res, "[0].outerHTML")
-        .equals("<div class=\"title-class\">\nTITLE\n<span>sub title</span><span test=\"Test Value\"></span></div>");
+        .equals("<div class=\"title-class\"><span>TITLE</span><span>sub title</span><span test=\"Test Value\"></span></div>");
 
         test("data.click.subTitle should be called once")
         .value(data.click.subTitle)
@@ -110,7 +110,7 @@ function testSimpleTemplate2(arrange, act, assert, callback, module) {
 
         test("res[0] should be")
         .value(res, "[0].outerHTML")
-        .equals("<div>\nFirst If\n\nElse\n</div>");
+        .equals("<div><span>First If</span><span>Else</span></div>");
 
     });
 }
@@ -155,7 +155,7 @@ function testSimpleTemplate3(arrange, act, assert, callback, module) {
 
         test("elements[0] should be")
         .value(elements, "[0].outerHTML")
-        .equals("<div class=\"card\">\nTitle\n</div>");
+        .equals("<div class=\"card\">Title</div>");
 
     });
 }
