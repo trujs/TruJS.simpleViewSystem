@@ -31,7 +31,6 @@ function _SimpleExpression() {
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
     , ARRAY_PATT = /^\[([A-Za-z0-9$.()_'\[\],]+)\]$/
     , TYPE_PATT = /^\[([a-z]+)\]$/
-    , SPLIT_PATT = SPLIT_PATH = /[.\[]/g
     , INDX_PATT = /.*\]$/
     ;
 
