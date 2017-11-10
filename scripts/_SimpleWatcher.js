@@ -83,7 +83,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
 
         //create the property
         properties[cnsts.watch] = {
-            "enumerable": true
+            "enumerable": false
             , "value": watch
         };
     }
@@ -105,7 +105,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
 
         //create the property
         properties[cnsts.unwatch] = {
-            "enumerable": true
+            "enumerable": false
             , "value": unwatch
         };
     }
@@ -274,12 +274,12 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         //loop through the prototype chain
         while(!isWatcher(obj) && !obj.hasOwnProperty(key)) {
             obj = Object.getPrototypeOf(obj);
-            if (obj.constructor === Object) {
+            if (!obj || obj.constructor === Object) {
                 break;
             }
         }
         //if the object has a watch and the key then return the object
-        if (obj.hasOwnProperty(cnsts.watch) && obj.hasOwnProperty(key)) {
+        if (!!obj && obj.hasOwnProperty(cnsts.watch) && obj.hasOwnProperty(key)) {
             return obj;
         }
 
