@@ -60,6 +60,7 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
     act(function (done) {
         renderCb = callback(function (error) {
             err = error;
+
             simpleViewHelper.state.toolbar1.title = "Sub Title";
             setTimeout(function () {
                 view.$destroy();
