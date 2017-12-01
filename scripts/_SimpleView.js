@@ -3,7 +3,7 @@
 * calls the controller
 * @factory
 */
-function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, funcAsync, newGuid) {
+function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, simpleMixin, setTimeout, newGuid) {
     var LD_PATH = /[_]/g
     , simpleView
     , cnsts = {
@@ -115,7 +115,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
 
                 //if there is a $render function on the context then fire it
                 if (view.context.hasOwnProperty("$render")) {
-                    funcAsync(view.context["$render"], [view]);
+                    setTimeout(view.context["$render"], 20, view);
                 }
 
                 //if there isn't an html template then we'll need to fire the
@@ -302,8 +302,19 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
         var attributes = {};
 
         for (var i = 0, l = element.attributes.length; i < l; i++) {
-            var attr = element.attributes[i];
-            attributes[attr.name] = attr[cnsts.value] || attr.value;
+            var attr = element.attributes[i]
+            , name = attr.name;
+            //convert the name
+            if (name.indexOf("-") !== -1) {
+                name = name.split("-");
+                name = name.map(function (val, indx) {
+                    if (!!indx) {
+                        val = val.substring(0,1).toUpperCase() + val.substring(1);
+                    }
+                    return val;
+                }).join("");
+            }
+            attributes[name] = attr[cnsts.value] || attr.value;
         }
 
         return attributes;
