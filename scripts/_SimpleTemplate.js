@@ -13,6 +13,8 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     , WSP_PATT = /^[ \t\n\r]+$/
     , TRIM_PATT = /^[\n\r\t ]+(.*?)[\n\r\t ]+$/
     , LN_END_PATT = /\r?\n/g
+    , SPC_PATT = /[ ][ ]+/g
+    , TAB_PATT = /\t/g
     , cnsts = {
         "input": "INPUT"
         , "select": "SELECT"
@@ -190,7 +192,10 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             }
 
             //set the node value to the result
-            el.innerHTML = result.value.replace(LN_END_PATT, "<br>");
+            el.innerHTML = result.value
+                .replace(LN_END_PATT, "<br>")
+                .replace(SPC_PATT, "&nbsp;")
+                .replace(TAB_PATT, "&#9;");
 
             //add the watchers
             if (result.keys.length > 0) {
