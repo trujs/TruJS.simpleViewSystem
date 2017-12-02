@@ -28,7 +28,6 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         , "prototype": "__proto"
         , "watch": "$watch"
         , "unwatch": "$unwatch"
-        , "common": "$common"
         , "process": "$process"
         , "destroy": "$destroy"
     }
@@ -369,8 +368,17 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         var property = {
             "enumerable": true
             , "handlers": {}
-            , "watcher": processValue(obj[key], options)
-        };
+            , "watcher": null
+            , "key": key
+        }
+        , val = obj[key]
+        ;
+        //if the property is a function then wrap it
+        if (isFunc(val)) {
+            val = wrapFunction(property, val);
+        }
+        //process the value
+        property.watcher = processValue(val, options);
         //the function for setting the value
         property.set = createSetter(property, key, obj, options);
         //the function for getting the value
@@ -437,6 +445,21 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         }
         //create the watcher with the
         return SimpleWatcher(value, options);
+    }
+    /**
+    * Wraps the function to call the property handers when ethe function is
+    * called
+    * @function
+    */
+    function wrapFunction(property, func) {
+        return function wrapped() {
+            //run the function and capture the output
+            var result = func.apply(this, arguments);
+            //fire the handlers
+            fireHandlers(property.handlers, property.key, result);
+            //return the result
+            return result;
+        };
     }
     /**
     * Checks the watched and original object for additions
