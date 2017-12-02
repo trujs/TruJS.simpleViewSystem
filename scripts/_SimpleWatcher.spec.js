@@ -331,6 +331,7 @@ function testSimpleWatcher8(arrange, act, assert, callback, module) {
         simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
         proto1 = {
             "name": "proto1"
+            , "key1": "protovalue1"
         };
         proto2 = {
             "name": "proto2"
@@ -353,7 +354,6 @@ function testSimpleWatcher8(arrange, act, assert, callback, module) {
         outerName = watched.outer.name;
         watched.name = "proto1.1";
         watched.outer.inner.name = "proto1.2";
-
     });
 
     assert(function (test) {
@@ -376,6 +376,10 @@ function testSimpleWatcher8(arrange, act, assert, callback, module) {
         test("proto2.name should be")
         .value(proto2.name)
         .equals("proto1.2");
+
+        test("inner.key1 should be")
+        .value(watched, "outer.inner.key1")
+        .equals("protovalue1");
 
     });
 }
@@ -465,6 +469,51 @@ function testSimpleWatcher10(arrange, act, assert, callback, module) {
         test("watched should have function properties")
         .value(watched, "func1.bind")
         .isOfType("function");
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleWatcher: function callback" })]*/
+function testSimpleWatcher11(arrange, act, assert, callback, module) {
+    var simpleWatcher, obj, watched, handler, result, res;
+
+    arrange(function () {
+        simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        result = {};
+        obj = {
+            "func1": callback(result)
+        };
+        handler = callback(function () {
+            return arguments[0];
+        });
+    });
+
+    act(function () {
+        watched = simpleWatcher(obj);
+        watched.$watch("func1", handler);
+        res = watched.func1("value");
+    });
+
+    assert(function (test) {
+        test("handler should be called once")
+        .value(handler)
+        .hasBeenCalled(1);
+
+        test("handler should be called with")
+        .value(handler)
+        .hasBeenCalledWithArg(0, 0, "func1");
+
+        test("handler should be called with")
+        .value(handler)
+        .hasBeenCalledWithArg(0, 1, result);
+
+        test("obj.func1 should be called with")
+        .value(obj.func1)
+        .hasBeenCalledWithArg(0, 0, "value");
+
+        test("res should be")
+        .value(res)
+        .equals(result);
 
     });
 }

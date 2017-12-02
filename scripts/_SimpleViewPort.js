@@ -2,38 +2,19 @@
 * This factory produces a worker function that creates a simple view port
 * @factory
 */
-function _SimpleViewPort(templates, controllers, simpleWatcher, simpleTemplate, simpleView, simpleDefaults, simpleErrors) {
-    var HTML_PATT = /^<([^ ]*?)/
+function _SimpleViewPort(controllers_view, createElement, simpleView) {
+
     /**
     * @worker
     */
-    return function SimpleViewPort(viewport, mainTag, state, renderedCb) {
-        var context, element, controller, renderCb, name
-        , loaded = false
-        ;
-
+    return function SimpleViewPort(viewport, state, renderedCb) {
         try {
-            mainTag = mainTag || simpleDefaults.mainTag;
+            var element = createElement("main")
+            , loaded = false;
 
-            name = HTML_PATT.exec(mainTag);
-            if (!!name) {
-                name = name[1];
-            }
+            simpleView(element, controllers_view, state, renderCb);
 
-
-            if (!state.hasOwnProperty(name || simpleDefaults.mainContext)) {
-                throw new Error(simpleErrors.missingMainContext.replace("{name}", simpleDefaults.mainContext));
-            }
-            context = simpleWatcher(state[name || simpleDefaults.mainContext]);
-
-            if (!controllers.hasOwnProperty(name || simpleDefaults.mainController)) {
-                throw new Error(simpleErrors.missingMainController.replace("{name}", simpleDefaults.mainController));
-            }
-            controller = controllers[name || simpleDefaults.mainController];
-
-            element = simpleTemplate(mainTag, context)[0];
-
-            renderCb = function (err) {
+            function renderCb(err) {
                 if (!loaded) {
                     loaded = true;
                     viewport.innerHTML = "";
@@ -41,8 +22,6 @@ function _SimpleViewPort(templates, controllers, simpleWatcher, simpleTemplate, 
                     renderedCb(err);
                 }
             };
-
-            simpleView(element, controller, context, renderCb);
         }
         catch(ex) {
             renderedCb(ex);
