@@ -1,19 +1,11 @@
 /**[@test({ "title": "TruJS.simpleViewSystem._SimpleViewPort: success" })]*/
 function testSimpleViewPort1(arrange, act, assert, callback, module) {
-    var simpleViewPort, templates, controllers, watcher, simpleTemplate, simpleView, viewport, state, renderedCb, elements, err;
+    var simpleViewPort, controller, simpleView, state, renderedCb, element
+    , createElement, viewport, err;
 
     arrange(function () {
-        templates = {
-        };
-        state = {
-            "main": {}
-        };
-        controllers = {
-            "main": {}
-        };
-        watcher = callback(state.main);
-        elements = [{}];
-        simpleTemplate = callback(elements);
+        state = {};
+        controller = {};
         simpleView = callback(function (a, b, c, cb) {
             cb();
         });
@@ -21,7 +13,9 @@ function testSimpleViewPort1(arrange, act, assert, callback, module) {
             "innerHTML": "test"
             , "appendChild": callback()
         };
-        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [templates, controllers, watcher, simpleTemplate, simpleView]]);
+        element = {};
+        createElement = callback(element);
+        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [controller, createElement, simpleView]]);
     });
 
     act(function (done) {
@@ -29,7 +23,7 @@ function testSimpleViewPort1(arrange, act, assert, callback, module) {
             err = error;
             done();
         });
-        simpleViewPort(viewport, null, state, renderedCb);
+        simpleViewPort(viewport, state, renderedCb);
     });
 
     assert(function (test) {
@@ -37,37 +31,17 @@ function testSimpleViewPort1(arrange, act, assert, callback, module) {
         .value(err)
         .isUndef();
 
-        test("watcher should be called once")
-        .value(watcher)
-        .hasBeenCalled(1);
-
-        test("watcher should be called with state.main")
-        .value(watcher)
-        .hasBeenCalledWithArg(0, 0, state.main);
-
-        test("simpleTemplate should be called once")
-        .value(simpleTemplate)
-        .hasBeenCalled(1);
-
-        test("simpleTemplate should be called with")
-        .value(simpleTemplate)
-        .hasBeenCalledWithArg(0, 0, "<main></main>");
-
         test("simpleView should be called once")
         .value(simpleView)
         .hasBeenCalled(1);
 
         test("simpleView should be called with")
         .value(simpleView)
-        .hasBeenCalledWithArg(0, 0, elements[0]);
+        .hasBeenCalledWithArg(0, 1, controller);
 
         test("simpleView should be called with")
         .value(simpleView)
-        .hasBeenCalledWithArg(0, 1, controllers.main);
-
-        test("simpleView should be called with")
-        .value(simpleView)
-        .hasBeenCalledWithArg(0, 2, state.main);
+        .hasBeenCalledWithArg(0, 2, state);
 
         test("viewport.innerHTML should be an empty string")
         .value(viewport.innerHTML)
@@ -77,10 +51,6 @@ function testSimpleViewPort1(arrange, act, assert, callback, module) {
         .value(viewport.appendChild)
         .hasBeenCalled(1);
 
-        test("viewport.appendChild should be called with")
-        .value(viewport.appendChild)
-        .hasBeenCalledWithArg(0, 0, elements[0]);
-
         test("renderedCb should be called once")
         .value(renderedCb)
         .hasBeenCalled(1);
@@ -88,51 +58,22 @@ function testSimpleViewPort1(arrange, act, assert, callback, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.simpleViewSystem._SimpleViewPort: missing state" })]*/
-function testSimpleViewPort2(arrange, act, assert, callback, module) {
-    var simpleViewPort, templates, state, renderedCb, err;
-
-    arrange(function () {
-        templates = {
-            "main": "template"
-        };
-        state = {
-            "nomain": {}
-        };
-        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [templates, "", "", "", "", ""]]);
-    });
-
-    act(function (done) {
-        renderedCb = callback(function (error) {
-            err = error;
-            done();
-        });
-        simpleViewPort("", null, state, renderedCb);
-    });
-
-    assert(function (test) {
-        test("err should be an error")
-        .value(err)
-        .isError();
-
-    });
-}
-
-/**[@test({ "title": "TruJS.simpleViewSystem._SimpleViewPort: missing controller" })]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleViewPort: error" })]*/
 function testSimpleViewPort3(arrange, act, assert, callback, module) {
-    var simpleViewPort, templates, state, controller, renderedCb, err;
+    var simpleViewPort, controller, simpleView, state, renderedCb, element
+    , createElement, err;
 
     arrange(function () {
-        templates = {
-            "main": "template"
-        };
-        state = {
-            "nomain": {}
-        };
-        controller = {
-            "nomain": {}
-        };
-        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [templates, controller, "", "", "", ""]]);
+        state = {};
+        controller = {};
+        simpleView = callback(function (a, b, c, cb) {
+            cb();
+        });
+        element = {};
+        createElement = callback(function () {
+            throw new Error("Error");
+        });
+        simpleViewPort = module(["TruJS.simpleViewSystem._SimpleViewPort", [controller, createElement, simpleView]]);
     });
 
     act(function (done) {
@@ -140,7 +81,7 @@ function testSimpleViewPort3(arrange, act, assert, callback, module) {
             err = error;
             done();
         });
-        simpleViewPort("", null, state, renderedCb);
+        simpleViewPort(null, state, renderedCb);
     });
 
     assert(function (test) {
