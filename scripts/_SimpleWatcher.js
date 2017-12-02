@@ -429,6 +429,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
             return;
         }
         if (value.hasOwnProperty(cnsts.nowatch)) {
+            delete value[cnsts.nowatch];
             return;
         }
         if (isWatcher(value)) {
@@ -466,7 +467,12 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     * @function
     */
     function defaultOptions(obj, options) {
+        //unsure we have an options object
         options = options || {};
+        //store the current prototype
+        var curProto = options.prototype;
+        //create a new options object using the current options and any reserved
+        // value from the object
         options = {
             "freeze": obj.hasOwnProperty(cnsts.freeze) ? obj[cnsts.freeze] : options.freeze
             , "seal": obj.hasOwnProperty(cnsts.seal) ? obj[cnsts.seal] : options.seal
@@ -482,22 +488,29 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         if (isNill(options.extensible)) {
             options.extensible = true;
         }
-        if (!isNill(options.prototype)) {
-            if (!isWatcher(options.prototype)) {
-                var proto = options.prototype;
-                if (isArray(obj)) {
-                    proto[cnsts.prototype] = selfAr;
-                }
-                else if (isFunc(obj)) {
-                    proto[cnsts.prototype] = selfFn;
-                }
-                else {
-                    proto[cnsts.prototype] = self;
-                }
-                delete options.prototype;
-                options.prototype = SimpleWatcher(proto, options);
-                options.protoOwner = obj;
+        //if there is a prototype on the options and it's not a watcher
+        // then create a watcher with the prototype object
+        if (!isNill(options.prototype) && !isWatcher(options.prototype)) {
+            //
+            var proto = options.prototype;
+            //remove the prototype from the options
+            delete options.prototype;
+            //pick the prototypes prototype
+            if (!!curProto) {
+                proto[cnsts.prototype] = curProto;
             }
+            else if (isArray(obj)) {
+                proto[cnsts.prototype] = selfAr;
+            }
+            else if (isFunc(obj)) {
+                proto[cnsts.prototype] = selfFn;
+            }
+            else {
+                proto[cnsts.prototype] = self;
+            }
+            //create the prototype watcher
+            options.prototype = SimpleWatcher(proto, options);
+            options.protoOwner = obj;
         }
 
         delete obj[cnsts.freeze];

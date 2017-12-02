@@ -331,6 +331,7 @@ function testSimpleWatcher8(arrange, act, assert, callback, module) {
         simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
         proto1 = {
             "name": "proto1"
+            , "key1": "protovalue1"
         };
         proto2 = {
             "name": "proto2"
@@ -353,7 +354,6 @@ function testSimpleWatcher8(arrange, act, assert, callback, module) {
         outerName = watched.outer.name;
         watched.name = "proto1.1";
         watched.outer.inner.name = "proto1.2";
-
     });
 
     assert(function (test) {
@@ -376,6 +376,10 @@ function testSimpleWatcher8(arrange, act, assert, callback, module) {
         test("proto2.name should be")
         .value(proto2.name)
         .equals("proto1.2");
+
+        test("inner.key1 should be")
+        .value(watched, "outer.inner.key1")
+        .equals("protovalue1");
 
     });
 }
