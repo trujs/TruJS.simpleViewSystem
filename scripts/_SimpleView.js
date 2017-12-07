@@ -155,7 +155,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, sim
         elements.every(function forEachElement(element) {
             var name = getElementName(element)
             , id = element.id || generateId(name)
-            , controller = resolvePath(name.replace(/-/g, "."), controllers).value
+            , controller = resolvePath(name.replace(/-/g, ".") + ".view", controllers).value
             , childState = getChildState(id, state)
             ;
 
