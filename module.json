@@ -13,7 +13,6 @@
     , "createElement": [".document.createElement", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
     , "createTextNode": [".document.createTextNode", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
     , "simpleErrors": ["TruJS.simpleViewSystem.SimpleErrors", [], false]
-    , "simpleDefaults": ["TruJS.simpleViewSystem.SimpleDefaults", [], false]
     , "simpleReporter": ["TruJS.log._Reporter", []]
     , "simpleExpression": ["TruJS.simpleViewSystem._SimpleExpression", []]
     , "simpleMixin": ["TruJS.simpleViewSystem._SimpleMixin", []]
