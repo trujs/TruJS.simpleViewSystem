@@ -517,3 +517,43 @@ function testSimpleWatcher11(arrange, act, assert, callback, module) {
 
     });
 }
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleWatcher: async" })]*/
+function testSimpleWatcher12(arrange, act, assert, callback, module) {
+    var simpleWatcher, obj, watched, handler, res;
+
+    arrange(function () {
+        simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        obj = {
+            "__async": true
+            , "key": "value"
+            , "innerObj": {
+                "__async": false
+                , "key": "value"
+            }
+        };
+        res = "";
+    });
+
+    act(function (done) {
+        handler = callback(function (key, value) {
+            res+= "-";
+            if (handler.callbackCount === 2) {
+                done(10);
+            }
+        });
+        watched = simpleWatcher(obj);
+        watched.$watch(["key", "innerObj.key"], handler);
+        watched.key = "value2";
+        res+= "1";
+        watched.innerObj.key = "value2";
+        res+= "2";
+    });
+
+    assert(function (test) {
+        test("res should be")
+        .value(res)
+        .equals("1-2-");
+
+    });
+}
