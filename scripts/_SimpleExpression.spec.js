@@ -245,7 +245,7 @@ function testSimpleExpression5(arrange, act, assert, smplExprHelper, module) {
 }
 
 /**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: function, no parentheses" })]*/
-function testSimpleExpression5(arrange, act, assert, smplExprHelper, module) {
+function testSimpleExpression6(arrange, act, assert, smplExprHelper, module) {
     var simpleExpression, expr, res;
 
     arrange(function () {
@@ -262,6 +262,60 @@ function testSimpleExpression5(arrange, act, assert, smplExprHelper, module) {
           .value(res, "result")
           .isOfType("function");
 
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: function with parameter binding" })]*/
+function testSimpleExpression7(arrange, act, assert, smplExprHelper, module) {
+    var simpleExpression, expr, res;
+
+    arrange(function () {
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
+        expr = "('test', 10)=>num3";
+    });
+
+    act(function () {
+        res = simpleExpression(expr, smplExprHelper);
+        res.result("string");
+    });
+
+    assert(function (test) {
+        test("num3 should be called once")
+        .value(smplExprHelper.num3)
+        .hasBeenCalled(1);
+
+        test("num3 should be called with 3 parameters")
+        .value(smplExprHelper.num3)
+        .getCallbackArgs(0)
+        .hasMemberCountOf(3);
+
+        test("num3 should be called with 3 parameters")
+        .value(smplExprHelper.num3)
+        .getCallbackArgs(0)
+        .stringify()
+        .equals("[\"test\",10,\"string\"]");
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: json" })]*/
+function testSimpleExpression8(arrange, act, assert, smplExprHelper, module) {
+    var simpleExpression, expr, res;
+
+    arrange(function () {
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
+        expr = "{ \"test1\": \"num3() === 3\", \"test2\": \"objAr[1] === 1\", \"test3\": \"obj1\" }";
+    });
+
+    act(function () {
+        res = simpleExpression(expr, smplExprHelper);
+    });
+
+    assert(function (test) {
+        test("res should be")
+        .value(res.result)
+        .equals("test1test3");
 
     });
 }
