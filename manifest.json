@@ -1,10 +1,17 @@
 [{
     "type": "module"
     , "name": "TruJS.simpleViewSystem"
-    , "version": "0.0.2"
+    , "version": "0.0.3"
 
     , "hints": {
         "TruJS": "{repos}/TruJS"
+    }
+
+    , "repos": {
+        "TruJS": {
+            "url": "https://github.com/trujs/TruJS.git"
+            , "branch": "version-0.0.2"
+        }
     }
 
     , "module": {
