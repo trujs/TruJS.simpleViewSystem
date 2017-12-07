@@ -24,11 +24,13 @@
 *   x("param") -> function
 * @factory
 */
-function _SimpleExpression() {
+function _SimpleExpression(arrayFromArguments) {
     var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]]+|\[[a-z]+\])$/i
     , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? in ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-Za-z0-9$.]+)(?: (desc|asc))?)?$/i
     , LITERAL_PATT = /^('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
+    , BIND_FUNC_PATT = /^\(([^)]+)\)=>([A-Za-z0-9$.,()'\[\]_]+)$/
+    , OBJ_PATT = /^\{.+\}$/
     , ARRAY_PATT = /^\[([A-Za-z0-9$.()_'\[\],]+)\]$/
     , TYPE_PATT = /^\[([a-z]+)\]$/
     , INDX_PATT = /.*\]$/
@@ -233,6 +235,69 @@ function _SimpleExpression() {
         return expr;
     }
     /**
+    * Creates a wrapped function for binding parameters
+    * @function
+    */
+    function bindFunc(value, path, params, data) {
+        var func = resolvePath(path, data).value
+        , keysLoaded = false
+        , expr = {
+            "type": "function"
+            , "keys": []
+            , "expression": value
+            , "result": wrapped
+        };
+
+        //get the param keys
+        parseParams();
+        keysLoaded = true;
+
+        return expr;
+
+        //the wrapped function
+        function wrapped() {
+            var params = parseParams()
+                .concat(arrayFromArguments(arguments));
+            return func.apply(null, params);
+        }
+        //parses and resolvese the parameters
+        function parseParams() {
+            return params.split(",").map(function mapParams(param) {
+                var paramExpr = evaluateValue(param, data);
+                if (!keysLoaded) {
+                    expr.keys = expr.keys.concat(paramExpr.keys);
+                }
+                return paramExpr.result;
+            });
+        }
+    }
+    /**
+    * Evaluates the property value of each property, if the result is truethy
+    *  then the property key is returned
+    * @function
+    */
+    function evaluateObject(json, data) {
+        var value = JSON.parse(json)
+        , expr = {
+            "type": "literal"
+            , "keys": []
+            , "expression": json
+            , "result": ""
+        };
+
+        //loop through the value keys
+        Object.keys(value)
+        .forEach(function forEachKey(key) {
+            var innerExpr = evaluate(value[key], data);
+            expr.keys = expr.keys.concat(innerExpr.keys);
+            if (!!innerExpr.result) {
+                expr.result+= key;
+            }
+        });
+
+        return expr;
+    }
+    /**
     * Evaluates the value expression and returns the value
     * @function
     */
@@ -252,6 +317,7 @@ function _SimpleExpression() {
         }
         //not a literal, should be a data value
         else {
+
             //see if this is a function
             if (!!(match = FUNC_PATT.exec(value))) {
                 return evaluatefunc(match, data);
@@ -259,9 +325,16 @@ function _SimpleExpression() {
             else if (!!(match = ARRAY_PATT.exec(value))) {
                 return evaluateArray(match[1]);
             }
+            else if(!!(match = BIND_FUNC_PATT.exec(value))) {
+                return bindFunc(match[0], match[2], match[1], data);
+            }
+            else if (!!(match = OBJ_PATT.exec(value))) {
+                return evaluateObject(match[0], data);
+            }
             else {
                 expr = value;
                 res = resolvePath(value, data);
+
                 return {
                     "type": "value"
                     , "keys": res.indexKeys.concat(res.path)
