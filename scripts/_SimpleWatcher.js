@@ -18,7 +18,7 @@
 *
 * @factory
 */
-function _SimpleWatcher(newGuid, simpleErrors) {
+function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
     var self = {}, selfAr = [], selfFn = emFn
     , cnsts = {
         "nowatch": "__nowatch"
@@ -26,6 +26,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         , "seal": "__seal"
         , "extensible": "__ext"
         , "prototype": "__proto"
+        , "async": "__async"
         , "watch": "$watch"
         , "unwatch": "$unwatch"
         , "process": "$process"
@@ -328,7 +329,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     * Fires any handlers
     * @function
     */
-    function fireHandlers(handlers, key, value) {
+    function fireHandlers(handlers, key, value, options) {
         var handlerList = [];
 
         //loop through the handlers, creating an array
@@ -339,16 +340,25 @@ function _SimpleWatcher(newGuid, simpleErrors) {
             }
         });
 
-        //fire each handler
-        handlerList.forEach(function forEachHandler(handler) {
-            try {
-                handler.apply(null, [key, value]);
-            }
-            catch(ex) {
-                //TODO: add reporter
-                console.log(ex);
-            }
-        });
+        if (options.async) {
+            funcAsync(executeHandlers);
+        }
+        else {
+            executeHandlers();
+        }
+
+        //execute
+        function executeHandlers() {
+            //fire each handler
+            handlerList.forEach(function forEachHandler(handler) {
+                try {
+                    handler.apply(null, [key, value]);
+                }
+                catch(ex) {
+                    simpleReporter.error(ex);
+                }
+            });
+        }
     }
     /**
     * Looks for a property with `name` in `properties`
@@ -375,7 +385,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         ;
         //if the property is a function then wrap it
         if (isFunc(val)) {
-            val = wrapFunction(property, val);
+            val = wrapFunction(property, val, options);
         }
         //process the value
         property.watcher = processValue(val, options);
@@ -410,7 +420,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
             }
             //update the value
             obj[key] = value;
-            fireHandlers(property.handlers, key, property.watcher||value);
+            fireHandlers(property.handlers, key, property.watcher||value, options);
         };
     }
     /**
@@ -451,12 +461,12 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     * called
     * @function
     */
-    function wrapFunction(property, func) {
+    function wrapFunction(property, func, options) {
         return function wrapped() {
             //run the function and capture the output
             var result = func.apply(this, arguments);
             //fire the handlers
-            fireHandlers(property.handlers, property.key, result);
+            fireHandlers(property.handlers, property.key, result, options);
             //return the result
             return result;
         };
@@ -489,7 +499,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     * Updates the options with default values
     * @function
     */
-    function defaultOptions(obj, options) {
+    function setOptions(obj, options) {
         //unsure we have an options object
         options = options || {};
         //store the current prototype
@@ -501,6 +511,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
             , "seal": obj.hasOwnProperty(cnsts.seal) ? obj[cnsts.seal] : options.seal
             , "extensible": obj.hasOwnProperty(cnsts.ext) ? obj[cnsts.ext] : options.extensible
             , "prototype": obj[cnsts.prototype] || options.prototype
+            , "async": !!(obj.hasOwnProperty(cnsts.async) ? obj[cnsts.async] : options.async)
         };
         if (isNill(options.freeze)) {
             options.freeze = true;
@@ -540,6 +551,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
         delete obj[cnsts.seal];
         delete obj[cnsts.ext];
         delete obj[cnsts.prototype];
+        delete obj[cnsts.async];
 
         return options;
     }
@@ -578,7 +590,7 @@ function _SimpleWatcher(newGuid, simpleErrors) {
     */
     function SimpleWatcher(obj, options) {
         //set the defaults
-        options = defaultOptions(obj, options);
+        options = setOptions(obj, options);
         //create a property descriptor for each property in obj
         var properties = createProperties(obj, options)
         , watched
