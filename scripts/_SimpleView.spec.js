@@ -20,16 +20,20 @@ function simpleViewHelper(callback, module) {
     }];
 
     controllers = {
-        "main": callback(function (render, state) {
+        "main": callback(function (render) {
             render(mainHtml, {});
         })
-        , "toolbar": callback(function (render, state) {
-            render(["<div>{:title:}</div>", "{:$tagName:} { background-color: blue; }"]);
-            return toolbarWatchers;
-        })
-        , "mainbody": callback(function (render, state) {
-            render("<div>{:name:}</div>", mainBodyContext);
-        })
+        , "toolbar":  {
+            "view": callback(function (render) {
+                render(["<div>{:title:}</div>", "{:$tagName:} { background-color: blue; }"]);
+                return toolbarWatchers;
+            })
+        }
+        , "mainbody":  {
+            "view": callback(function (render) {
+                render("<div>{:name:}</div>", mainBodyContext);
+            })
+        }
     };
 
     return {
@@ -87,11 +91,11 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
         .hasBeenCalled(1);
 
         test("controllers.toolbar should be called once")
-        .value(simpleViewHelper.controllers.toolbar)
+        .value(simpleViewHelper.controllers.toolbar.view)
         .hasBeenCalled(1);
 
         test("controllers.mainbody should be called once")
-        .value(simpleViewHelper.controllers.mainbody)
+        .value(simpleViewHelper.controllers.mainbody.view)
         .hasBeenCalled(1);
 
         test("toolbarWatchers[0].handler should be called once")
