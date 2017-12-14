@@ -557,3 +557,96 @@ function testSimpleWatcher12(arrange, act, assert, callback, module) {
 
     });
 }
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleWatcher: $every" })]*/
+function testSimpleWatcher13(arrange, act, assert, callback, module) {
+    var simpleWatcher, obj, watched, handler;
+
+    arrange(function () {
+        simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        obj = {
+            "hotdog": {
+                "bottom": "bun"
+                , "middle": "hotdog"
+            }
+            , "hamburger": {
+                "top": "bun"
+                , "middle": "burger"
+                , "bottom": "bun"
+            }
+        };
+    });
+
+    act(function (done) {
+        handler = callback(function (key, value) {
+            if (handler.callbackCount === 3) {
+                done(10);
+            }
+        });
+        watched = simpleWatcher(obj);
+
+        watched.$watch("hamburger.$every", handler);
+        watched.hamburger.top = "bun1";
+        watched.hamburger.middle = "cheese";
+        watched.hamburger.bottom = "bun1";
+        watched.hotdog.bottom = "bun2";
+        watched.hotdog.middle = "turkeydog";
+    });
+
+    assert(function (test) {
+        test("handler should be called 3 times")
+        .value(handler)
+        .hasBeenCalled(3);
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleWatcher: $all" })]*/
+function testSimpleWatcher13(arrange, act, assert, callback, module) {
+    var simpleWatcher, obj, watched, handler;
+
+    arrange(function () {
+        simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        obj = {
+            "hotdog": {
+                "bottom": "bun"
+                , "middle": "hotdog"
+            }
+            , "hamburger": {
+                "top": "bun"
+                , "middle": "burger"
+                , "bottom": "bun"
+                , "condiments": [
+                    "katchup"
+                    , "pickles"
+                ]
+            }
+        };
+    });
+
+    act(function (done) {
+        handler = callback(function (key, value) {
+            if (handler.callbackCount === 5) {
+                done(10);
+            }
+        });
+        watched = simpleWatcher(obj);
+
+        watched.$watch("$all", handler);
+        watched.hamburger.top = "bun1";
+        watched.hamburger.middle = "cheese";
+        watched.hamburger.bottom = "bun1";
+        watched.hamburger.condiments[0] = "mustard";
+        watched.hamburger.condiments[1] = "lettuce";
+        watched.hotdog.bottom = "bun2";
+        watched.hotdog.middle = "turkeydog";
+
+    });
+
+    assert(function (test) {
+        test("handler should be called 7 times")
+        .value(handler)
+        .hasBeenCalled(7);
+
+    });
+}

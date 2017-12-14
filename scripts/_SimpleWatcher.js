@@ -31,9 +31,12 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         , "unwatch": "$unwatch"
         , "process": "$process"
         , "destroy": "$destroy"
+        , "all": "$all"
+        , "every": "$every"
     }
     , reserved = Object.keys(cnsts).map(function (k) { return cnsts[k]; })
-    , SPLIT_PATT = /[.]/;
+    , SPLIT_PATT = /[.]/
+    , INDXR_PATT = /\[(.+?)\]/g;
 
     /**
     * Creates a new object whos properties are mapped to those of the original
@@ -60,15 +63,37 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         var watch = function watch(paths, handler) {
             var guids = [];
 
-            if(!isArray(paths)) {
-                paths = [paths];
-            }
-
             //process the watcher to ensure new properties are watched
             properties[cnsts.process].value();
 
+            //update the paths to an array
+            if(!isArray(paths)) {
+                //using the $all path to lookup all properties plus all children
+                if (paths.indexOf(cnsts.all) === 0) {
+                    paths = Object.keys(obj)
+                    .map(function (key) {
+                        return key + ((isObject(obj[key]) || isArray(obj[key]))  && ("." + cnsts.all) || "");
+                    });
+                }
+                //using the $every path to lookup all local properties
+                else if (paths.indexOf(cnsts.every) === 0) {
+                    paths = Object.keys(obj)
+                    .map(function (key) {
+                        return key + paths.replace(cnsts.every, "");
+                    });
+                }
+                else {
+                    paths = [paths];
+                }
+            }
+
             //process the paths
             paths.forEach(function forEachPath(path) {
+                //convert any indexer patterns to dot notation
+                path = path.replace(INDXR_PATT, function(match, val) {
+                    return "." + val;
+                });
+                //split the path by dot notation
                 var segments = path.split(SPLIT_PATT)
                 , key = segments[0]
                 , property = getProperty(key, properties)

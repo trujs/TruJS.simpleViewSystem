@@ -3,7 +3,7 @@
 * calls the controller
 * @factory
 */
-function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, simpleMixin, setTimeout, newGuid) {
+function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, funcAsync, newGuid) {
     var LD_PATH = /[_]/g
     , simpleView
     , cnsts = {
@@ -53,34 +53,9 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, sim
         //the render function
         function render(template, context) {
             try {
-                //destroy the old context if we have a new one
-                if (!!context) {
-                    if (!!view.context) {
-                        destroyContext(view);
-                    }
-                    view.context = context;
-                }
-                else if (!view.context) {
-                    view.context = {};
-                }
 
-                //destroy the current children
-                destroyChildren(view);
-
-                //destroy the current child views
-                destroyViews(view);
-
-                //if a template was passed then use it
-                if (!!template) {
-                    //if template is an array then it's html + css
-                    if (isArray(template)) {
-                        view.cssTemplate = template[1];
-                        view.htmlTemplate = template[0];
-                    }
-                    else {
-                        view.htmlTemplate = template;
-                    }
-                }
+                //set or reset the view
+                resetView(view, template, context)
 
                 //create the state context
                 view.stateContext = createStateContext(view);
@@ -88,20 +63,8 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, sim
                 //clear the element contents
                 view.element.innerHTML = "";
 
-                //if we have am html template then process it
-                if (!!view.htmlTemplate) {
-                    //process the html and get the elements
-                    view.children = Array.prototype.slice.apply(
-                        simpleTemplate(view.htmlTemplate, view.stateContext)
-                    );
-                }
-
-                //add the style element
-                if (!!view.cssTemplate) {
-                    view.children.push(
-                        simpleStyle(view.cssTemplate, view.stateContext)
-                    );
-                }
+                //process the html and css templates
+                processTemplates(view);
 
                 //if we have elements then process them
                 if (!isEmpty(view.children)) {
@@ -115,7 +78,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, sim
 
                 //if there is a $render function on the context then fire it
                 if (view.context.hasOwnProperty("$render")) {
-                    setTimeout(view.context["$render"], 20, view);
+                    funcAsync(view.context["$render"], [view]);
                 }
 
                 //if there isn't an html template then we'll need to fire the
@@ -133,6 +96,61 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, sim
         render.view = view;
 
         return render;
+    }
+    /**
+    * Sets or resets the view context and template along with destroying any
+    * child elements and child views
+    * @function
+    */
+    function resetView(view, template, context) {
+        //destroy the old context if we have a new one
+        if (!!context) {
+            if (!!view.context) {
+                destroyContext(view);
+            }
+            view.context = context;
+        }
+        else if (!view.context) {
+            view.context = {};
+        }
+
+        //destroy the current children
+        destroyChildren(view);
+
+        //destroy the current child views
+        destroyViews(view);
+
+        //if a template was passed then use it
+        if (!!template) {
+            //if template is an array then it's html + css
+            if (isArray(template)) {
+                view.cssTemplate = template[1];
+                view.htmlTemplate = template[0];
+            }
+            else {
+                view.htmlTemplate = template;
+            }
+        }
+    }
+    /**
+    * Processes the html and css templates
+    * @function
+    */
+    function processTemplates(view) {
+        //if we have am html template then process it
+        if (!!view.htmlTemplate) {
+            //process the html and get the elements
+            view.children = Array.prototype.slice.apply(
+                simpleTemplate(view.htmlTemplate, view.stateContext)
+            );
+        }
+
+        //add the style element
+        if (!!view.cssTemplate) {
+            view.children.push(
+                simpleStyle(view.cssTemplate, view.stateContext)
+            );
+        }
     }
     /**
     * Loops through the elements and processes any tags that appear in the
@@ -158,6 +176,11 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, sim
             , controller = resolvePath(name.replace(/-/g, ".") + ".view", controllers).value
             , childState = getChildState(id, state)
             ;
+
+            //manual entries that don't have the standard view path
+            if (!controller) {
+                controller = resolvePath(name.replace(/-/g, "."), controllers).value;
+            }
 
             if (!!controller) {
                 if (!childState) {
