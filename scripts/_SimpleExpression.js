@@ -25,11 +25,11 @@
 * @factory
 */
 function _SimpleExpression(arrayFromArguments) {
-    var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]]+|\[[a-z]+\])$/i
-    , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? in ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-Za-z0-9$.]+)(?: (desc|asc))?)?$/i
-    , LITERAL_PATT = /^('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined$/
+    var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
+    , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? in ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
+    , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
-    , BIND_FUNC_PATT = /^\(([^)]+)\)=>([A-Za-z0-9$.,()'\[\]_]+)$/
+    , BIND_FUNC_PATT = /^\(([^)]+)\) ?=> ?([A-Za-z0-9$.,()'\[\]_]+)$/
     , OBJ_PATT = /^\{.+\}$/
     , ARRAY_PATT = /^\[([A-Za-z0-9$.()_'\[\],]+)\]$/
     , TYPE_PATT = /^\[([a-z]+)\]$/
@@ -63,17 +63,17 @@ function _SimpleExpression(arrayFromArguments) {
         var indxVar = match[2]
         , keyVar = match[1]
         , valVar = match[3]
-        , res = evaluateValue(match[4], data)
-        , coll = res.result
-        , sort = match[5]
-        , dir = match[6] || "asc"
-        , keys = Object.keys(coll)
-        , indx = 0
         , vars = {
             "indx": indxVar
             , "key": keyVar
             , "val": valVar
         }
+        , res = evaluateValue(match[4], data)
+        , coll = filterCollection(res.result, match[7], vars, data)
+        , sort = match[5]
+        , dir = match[6] || "asc"
+        , keys = Object.keys(coll)
+        , indx = 0
         , expr = {
             "type": "iterator"
             , "keys": res.keys
@@ -84,8 +84,12 @@ function _SimpleExpression(arrayFromArguments) {
         if (!!sort) {
             keys.sort(function sortKeys(k1, k2) {
                 var k1Val = sort === keyVar && k1
+                    || sort === indxVar && keys.indexOf(k1)
+                    || sort === valVar && coll[k1]
                     || resolvePath(sort, coll[k1]).value
                 , k2Val = sort === keyVar && k2
+                    || sort === indxVar && keys.indexOf(k2)
+                    || sort === valVar && coll[k2]
                     || resolvePath(sort, coll[k2]).value
                 ;
                 if (k1Val < k2Val) {
@@ -116,12 +120,45 @@ function _SimpleExpression(arrayFromArguments) {
             }
             , "next": {
                 "value": function next() {
-                    return keys[indx++];
+                    if (indx < keys.length) {
+                        var key = keys[indx]
+                        , context = Object.create(data);
+                        context[vars.key] = key;
+                        !!vars.indx && (context[vars.indx] = indx);
+                        !!vars.val && (context[vars.val] = coll[key]);
+                        indx++;
+                        return context;
+                    }
                 }
             }
         });
 
         return expr;
+    }
+    /**
+    * Filters the collection or array
+    * @function
+    */
+    function filterCollection(coll, expr, vars, data) {
+        if (!!coll && !!expr) {
+            var keys = Object.keys(coll)
+            , isAr = isArray(coll)
+            , filtered = isAr && [] || {};
+
+            keys.forEach(function forEachKey(key, indx) {
+                var context = Object.create(data);
+                context[vars.key] = key;
+                !!vars.indx && (context[vars.indx] = indx);
+                !!vars.val && (context[vars.val] = coll[key]);
+                if (evaluate(expr, context).result) {
+                    isAr && filtered.push(coll[key]) ||
+                        (filtered[key] = coll[key]);
+                }
+            });
+
+            return filtered;
+        }
+        return coll;
     }
     /**
     * Evaluates the conditional statement and returns the result
