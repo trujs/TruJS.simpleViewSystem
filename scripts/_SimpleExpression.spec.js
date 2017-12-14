@@ -127,19 +127,19 @@ function testSimpleExpression2(arrange, act, assert, smplExprHelper, module) {
 
     assert(function (test) {
         test("res[0] should be")
-          .value(res, "[0]")
+          .value(res, "[0].val")
           .equals("0");
 
         test("res[0] should be")
-          .value(res, "[1]")
+          .value(res, "[1].val")
           .equals("1");
 
         test("res[0] should be")
-          .value(res, "[2]")
+          .value(res, "[2].val")
           .equals("2");
 
         test("res[0] should be")
-          .value(res, "[3]")
+          .value(res, "[3].val")
           .isUndef();
 
     });
@@ -164,15 +164,15 @@ function testSimpleExpression3(arrange, act, assert, smplExprHelper, module) {
 
     assert(function (test) {
         test("res[0] should be")
-          .value(res, "[0]")
+          .value(res, "[0].val")
           .equals("2");
 
         test("res[1] should be")
-          .value(res, "[1]")
+          .value(res, "[1].val")
           .equals("1");
 
         test("res[2] should be")
-          .value(res, "[2]")
+          .value(res, "[2].val")
           .equals("0");
 
     });
@@ -197,15 +197,15 @@ function testSimpleExpression4(arrange, act, assert, smplExprHelper, module) {
 
     assert(function (test) {
         test("res[0] should be")
-          .value(res, "[0]")
+          .value(res, "[0].$key")
           .equals("1");
 
         test("res[1] should be")
-          .value(res, "[1]")
+          .value(res, "[1].$key")
           .equals("0");
 
         test("res[2] should be")
-          .value(res, "[2]")
+          .value(res, "[2].$key")
           .equals("2");
 
     });
@@ -230,15 +230,15 @@ function testSimpleExpression5(arrange, act, assert, smplExprHelper, module) {
 
     assert(function (test) {
         test("res[0] should be")
-          .value(res, "[0]")
+          .value(res, "[0].$key")
           .equals("key3");
 
         test("res[1] should be")
-          .value(res, "[1]")
+          .value(res, "[1].$key")
           .equals("key2");
 
         test("res[2] should be")
-          .value(res, "[2]")
+          .value(res, "[2].$key")
           .equals("key1");
 
     });
@@ -316,6 +316,112 @@ function testSimpleExpression8(arrange, act, assert, smplExprHelper, module) {
         test("res should be")
         .value(res.result)
         .equals("test1test3");
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator using multiple vars" })]*/
+function testSimpleExpression9(arrange, act, assert, smplExprHelper, module) {
+    var simpleExpression, expr, iter, res;
+
+    arrange(function () {
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
+        expr = "$k,$i, $v in obj1 sort $k desc";
+        res = [];
+    });
+
+    act(function () {
+        iter = simpleExpression(expr, smplExprHelper);
+        res[0] = iter.iterator.next();
+        res[1] = iter.iterator.next();
+        res[2] = iter.iterator.next();
+    });
+
+    assert(function (test) {
+        test("res[0] should be")
+        .value(res, "[0].$k")
+        .equals("key3");
+
+        test("res[0] should be")
+        .value(res, "[0].$i")
+        .equals(0);
+
+        test("res[0] should be")
+        .value(res, "[0].$v")
+        .equals("str0");
+
+        test("res[1] should be")
+        .value(res, "[1].$k")
+        .equals("key2");
+
+        test("res[1] should be")
+        .value(res, "[1].$i")
+        .equals(1);
+
+        test("res[1] should be")
+        .value(res, "[1].$v")
+        .equals("str2");
+
+        test("res[2] should be")
+        .value(res, "[2].$k")
+        .equals("key1");
+
+        test("res[2] should be")
+        .value(res, "[2].$i")
+        .equals(2);
+
+        test("res[2] should be")
+        .value(res, "[2].$v")
+        .equals("str1");
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator with filter" })]*/
+function testSimpleExpression10(arrange, act, assert, smplExprHelper, module) {
+    var simpleExpression, expr, iter, res;
+
+    arrange(function () {
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
+        expr = "$key in obj1 filter $key === 'key2'";
+    });
+
+    act(function () {
+        iter = simpleExpression(expr, smplExprHelper);
+        res = iter.iterator.next();
+    });
+
+    assert(function (test) {
+        test("the iterator length should be")
+        .value(iter, "iterator.length")
+        .equals(1);
+
+        test("res should be")
+        .value(res, "$key")
+        .equals("key2");
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator with array literal" })]*/
+function testSimpleExpression10(arrange, act, assert, smplExprHelper, module) {
+    var simpleExpression, expr, iter, res;
+
+    arrange(function () {
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
+        expr = "$k,$i,$v in [1,2,3,'4'] sort $v asc";
+    });
+
+    act(function () {
+        iter = simpleExpression(expr, smplExprHelper);
+        res = iter.iterator.next();
+    });
+
+    assert(function (test) {
+        test("res should be")
+        .value(res)
+        .stringify()
+        .equals("{\"$k\":\"0\",\"$i\":0,\"$v\":1}");
 
     });
 }
