@@ -16,9 +16,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     , SPC_PATT = /[ ][ ]+/g
     , TAB_PATT = /\t/g
     , cnsts = {
-        "input": "INPUT"
-        , "select": "SELECT"
-        , "value": "$value"
+        "value": "$value"
         , "destroy": "$destroy"
         , "watch": "$watch"
         , "unwatch": "$unwatch"
@@ -38,10 +36,11 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * Begins the element processing, resolves/rejects the promise
     * @function
     */
-    function process(element, data) {
-        //create the starting context object and start processing the main
-        // element
-        processElement(element, createContext(data, element));
+    function process(node, data) {
+        //create the starting context object and start processing the node
+        if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
+            processElement(node, createContext(data, node));
+        }
     }
     /**
     * Create the context object, making data the prototype
@@ -89,7 +88,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 //add any mixins
                 simpleMixin(element, context);
                 //this is a work around for the proper option to be selected
-                if (element.tagName === cnsts.select) {
+                if (element.tagName === "SELECT") {
                     element.innerHTML = element.innerHTML;
                 }
             }
@@ -161,7 +160,9 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         //process the nodes
         if (!!nodes) {
             nodes.forEach(function forEachNode(node) {
-                processElement(node, context);
+                if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
+                    processElement(node, context);
+                }
             });
         }
         //remove the if
@@ -256,7 +257,8 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
 
         function setAttribute(result) {
             var value = result.value;
-            //if the values array has only one, then use that
+            //if the values array has only one, then use that because it will
+            // have the actual object or function rather than a string representation
             if (!result.hybrid && result.values.length === 1) {
                 value = result.values[0];
             }
@@ -304,14 +306,10 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         var repeatContext
         , element = createElement(parentTag)
         , iter = simpleExpression(expr.replace(TAG_PATT, "$1"), context).iterator
-        , key, nodes;
+        , nodes;
         //make sure this evalutated to an iterator
         if (!!iter.next) {
-            while(!isNill(key = iter.next())) {
-                repeatContext = Object.create(context);
-                repeatContext[iter.vars.key] = key;
-                !!iter.vars.indx && (repeatContext[iter.vars.indx] = iter.index - 1);
-                !!iter.vars.val && (repeatContext[iter.vars.val] = iter.collection[key]);
+            while(!isNill(repeatContext = iter.next())) {
                 element.innerHTML = template;
                 nodes = processChildren(element, repeatContext);
                 insertNodes(beforeEl, nodes);
@@ -356,8 +354,10 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             return expr.result;
         });
 
-        if (result.value === "null" || result.value === "undefined") {
-            result.value = eval(result.value);
+        if (!result.hybrid && result.values.length === 1) {
+            if (result.value === "null" || result.value === "undefined") {
+                result.values[0] = eval(result.value);
+            }
         }
 
         return result;

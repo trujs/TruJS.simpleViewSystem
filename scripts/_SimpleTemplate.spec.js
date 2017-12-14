@@ -76,13 +76,13 @@ function testSimpleTemplate2(arrange, act, assert, callback, module) {
         template = [
             "<div>"
             , "<if expr=\"{:obj is [object]:}\">"
-            , "First If"
+            , "    First If"
             , "</if>"
             , "<if expr=\"{:str1 = str2:}\">"
-            , "Second If"
+            , "    Second If"
             , "</if>"
             , "<else>"
-            , "Else"
+            , "    Else"
             , "</else>"
             , "</div>"
         ].join("\n");
