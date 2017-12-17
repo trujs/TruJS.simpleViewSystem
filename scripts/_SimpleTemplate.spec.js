@@ -115,8 +115,56 @@ function testSimpleTemplate2(arrange, act, assert, callback, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: destroy "})]*/
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: conditional attribs "})]*/
 function testSimpleTemplate3(arrange, act, assert, callback, module) {
+    var simpleTemplate, template, data, res;
+
+    arrange(function () {
+        simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
+        template = [
+            "<div>"
+            , "<span if=\"str1 === '1'\">"
+            , "1ST IF"
+            , "</span>"
+            , "<span if=\"str2 === '1'\">"
+            , "2ND IF"
+            , "</span>"
+            , "<span else>"
+            , "Else"
+            , "</span>"
+            , "</div>"
+        ].join("\n");
+        data = {
+            "obj": {}
+            , "str1": "1"
+            , "str2": "2"
+        };
+    });
+
+    act(function () {
+        try {
+            res = simpleTemplate(template, data);
+        }
+        catch(ex) {
+            res = ex;
+        }
+    });
+
+    assert(function (test) {
+        test("res should not be an error")
+        .value(res)
+        .not()
+        .isError();
+
+        test("res[0] should be")
+        .value(res, "[0].outerHTML")
+        .equals("<div><span>1ST IF</span><span>Else</span></div>");
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: destroy "})]*/
+function testSimpleTemplate4(arrange, act, assert, callback, module) {
     var watcher, simpleTemplate, template, context, elements;
 
     arrange(function () {
