@@ -69,7 +69,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             processRepeatElement(element, context);
         }
         else if (element.nodeName === "IF") {
-            processIf(element, context)
+            processIfElement(element, context)
         }
         else if (element.nodeName === "ELSE") {
             //remove the else
@@ -81,6 +81,9 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         else {
             if (element.hasAttribute("repeat")) {
                 processRepeatAttrib(element, context);
+            }
+            else if (element.hasAttribute("if")) {
+                processIfAttrib(element, context);
             }
             else {
                 processAttributes(element, context);
@@ -135,28 +138,69 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * Resolves the if expression, if true then inserts the if children
     * @function
     */
-    function processIf(element, context) {
-        var children = element.childNodes
-        , expr = element.getAttribute("expr")
-        , pass = false
+    function processIfElement(element, context) {
+        var expr = element.getAttribute("expr")
         , elseEl = element.nextElementSibling
-        , nodes
+        , elseNodes
         ;
 
-        if (!!expr) {
-            pass = !!simpleExpression(expr.replace(TAG_PATT, "$1"), context).result;
-        }
-        //if pass then use the if children
-        if (pass) {
-            nodes = insertNodes(element, element.childNodes);
-        }
-        //process the else
         if (!!elseEl && elseEl.nodeName === "ELSE") {
-            //if not pass then use the else children
-            if (!pass) {
-                nodes = insertNodes(element, elseEl.childNodes);
+            elseNodes = elseEl.childNodes;
+        }
+
+        doIf(element, expr, element.childNodes, elseNodes, context);
+
+        //remove the if
+        element.parentNode.removeChild(element);
+    }
+    /**
+    * Evaluates the if expression found in the if attribute
+    * @function
+    */
+    function processIfAttrib(element, context) {
+        var expr = element.getAttribute("if")
+        , elseEl = element.nextElementSibling
+        , pass
+        ;
+
+        element.removeAttribute("if");
+
+        if (!!elseEl) {
+            if (!elseEl.hasAttribute("else")) {
+                elseEl = null;
+            }
+            else {
+                elseEl.removeAttribute("else");
             }
         }
+
+        pass = doIf(element, expr, [element], [elseEl], context);
+
+        if(!pass) {
+            element.parentNode.removeChild(element);
+        }
+        else if (!!elseEl) {
+            elseEl.parentNode.removeChild(elseEl);
+        }
+    }
+    /**
+    * Evaluates the if expression, if fails, removes the element and all of it's
+    * children. If the next sibling is an else, and the if passed, then it and
+    * all of it's children
+    * @function
+    */
+    function doIf(element, expr, ifNodes, elseNodes, context) {
+        var pass = !!simpleExpression(expr.replace(TAG_PATT, "$1"), context).result
+        , nodes;
+
+        //if pass then use the if children
+        if (pass) {
+            nodes = insertNodes(element, ifNodes);
+        }
+        else if (!!elseNodes) {
+            nodes = insertNodes(element, elseNodes);
+        }
+
         //process the nodes
         if (!!nodes) {
             nodes.forEach(function forEachNode(node) {
@@ -165,8 +209,8 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 }
             });
         }
-        //remove the if
-        element.parentNode.removeChild(element);
+
+        return pass;
     }
     /**
     * Processes a text node
