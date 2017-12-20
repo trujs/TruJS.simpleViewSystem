@@ -11,6 +11,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
         , "watch": "$watch"
         , "unwatch": "$unwatch"
         , "value": "$value"
+        , "content": "$content"
     }
     ;
 
@@ -28,7 +29,9 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
     * @function
     */
     function createStateContext(view) {
-        Object.setPrototypeOf(view.context, view.state);
+        if (!!view.state) {
+            Object.setPrototypeOf(view.context, view.state);
+        }
         return Object.create(view.context, {
             "$tagName": {
                 "enumerable": true
@@ -170,9 +173,18 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
             }
         }
 
+        //loop through the elements until finished or an error occurs
         elements.every(function forEachElement(element) {
+            //if this is a text node, skip all of this
+            if (element.nodeType !== 1) {
+                renderCb();
+                return true;
+            }
+
+            //process the element
             var name = getElementName(element)
             , id = element.id || generateId(name)
+            , isStateless = element.hasAttribute("stateless")
             , controller = resolvePath(name.replace(/-/g, ".") + ".view", controllers).value
             , childState = getChildState(id, state)
             ;
@@ -182,8 +194,9 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
                 controller = resolvePath(name.replace(/-/g, "."), controllers).value;
             }
 
+            //if there is a controller then run the view
             if (!!controller) {
-                if (!childState) {
+                if (!childState && !isStateless) {
                     renderedCb(new Error(simpleErrors.missingChildState.replace("{name}", id)));
                     return false;
                 }
@@ -191,6 +204,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
                     simpleView(element, controller, childState, renderCb)
                 );
             }
+            //otherwise process the children, or execute the render callback
             else {
                 //if there are children then process those
                 if (element.childNodes.length > 0) {
@@ -203,7 +217,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
                     renderCb();
                 }
             }
-
+            //continue the loop
             return true;
         });
 
@@ -338,6 +352,11 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
                 }).join("");
             }
             attributes[name] = attr[cnsts.value] || attr.value;
+        }
+
+        //if there is innerHTML then let's scrape that out and add an attrib
+        if (!!element.innerHTML) {
+            attributes[cnsts.content] = element.innerHTML;
         }
 
         return attributes;
