@@ -458,9 +458,11 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         delete element.watchers;
         element[cnsts.destroy] = function destroy() {
             //destroy the elements watchers
-            watchers.forEach(function (watcher) {
-                watcher.parent[cnsts.unwatch](watcher.guids);
-            });
+            if (isArray(watchers)) {
+                watchers.forEach(function (watcher) {
+                    watcher.parent[cnsts.unwatch](watcher.guids);
+                });
+            }
             //destroy the children
             destroyChildren(element);
         };
