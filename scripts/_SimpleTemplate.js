@@ -174,7 +174,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             }
         }
 
-        pass = doIf(element, expr, [element], [elseEl], context);
+        pass = doIf(element, expr, [element], !!elseEl && [elseEl], context);
 
         if(!pass) {
             element.parentNode.removeChild(element);
