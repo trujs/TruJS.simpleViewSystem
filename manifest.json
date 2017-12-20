@@ -7,13 +7,6 @@
         "TruJS": "{repos}/TruJS"
     }
 
-    , "repos": {
-        "TruJS": {
-            "url": "https://github.com/trujs/TruJS.git"
-            , "branch": "version-0.0.2"
-        }
-    }
-
     , "module": {
         "document": [":document"]
     }
