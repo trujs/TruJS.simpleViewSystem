@@ -14,17 +14,11 @@
     , "format": "browser"
     , "minify": false
     , "namespace": "SVS"
-
-    , "output": "./build/{name}/app.js"
 }, {
     "type": "test"
     , "name": "TruJS.simpleViewSystem"
 
     , "format": "browser"
 
-    , "moduleFile": "app.js"
-    , "moduleName": "SVS"
-    , "testFile": "browser-test.js"
-
-    , "output": "./build/{name}/"
+    , "output": "./builds/{name}/"
 }]
