@@ -79,7 +79,13 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             processTextNode(element, context)
         }
         else {
-            if (element.hasAttribute("repeat")) {
+            if (element.hasAttribute("repeat") && element.hasAttribute("if")) {
+                processIfAttrib(element, context);
+                if (!!element.parentNode) {
+                    processRepeatAttrib(element, context);
+                }
+            }
+            else if (element.hasAttribute("repeat")) {
                 processRepeatAttrib(element, context);
             }
             else if (element.hasAttribute("if")) {
