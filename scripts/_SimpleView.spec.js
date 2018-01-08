@@ -1,7 +1,9 @@
 /**[@test({ "label": "simpleViewHelper", "type": "factory" })]*/
 function simpleViewHelper(callback, module) {
-    var watcher, mainHtml, controllers, mainBodyContext, toolbarWatchers, createElement;
+    var watcher, mainHtml, controllers, mainBodyContext, toolbarWatchers
+    , createElement, $container, resolvePath;
 
+    resolvePath = module(["TruJS.resolvePath", [], false]);
     watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
     createElement = module(".createElement");
     mainHtml = [
@@ -36,10 +38,14 @@ function simpleViewHelper(callback, module) {
         }
     };
 
+    $container = callback(function (path) {
+        return resolvePath(path.substring(13), controllers).value;
+    });
+
     return {
         "controllers": controllers
         , "mainEl": createElement('main')
-        , "simpleView": module(["TruJS.simpleViewSystem._SimpleView", [controllers]])
+        , "simpleView": module(["TruJS.simpleViewSystem._SimpleView", [$container]])
         , "state": watcher({
             "toolbar1": {
                 "title": "Title"

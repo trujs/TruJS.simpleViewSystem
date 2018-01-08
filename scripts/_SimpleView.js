@@ -3,7 +3,7 @@
 * calls the controller
 * @factory
 */
-function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, funcAsync, newGuid) {
+function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, funcAsync, newGuid, funcInspector, simpleReporter) {
     var LD_PATH = /[_]/g
     , simpleView
     , cnsts = {
@@ -185,17 +185,23 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
             var name = getElementName(element)
             , id = element.id || generateId(name)
             , isStateless = element.hasAttribute("stateless")
-            , controller = resolvePath(name.replace(/-/g, ".") + ".view", controllers).value
+            , ctrlName = ".controllers." + name.replace(/-/g, ".")
+            , controller = getController(ctrlName + ".view")
             , childState = getChildState(id, state)
             ;
 
             //manual entries that don't have the standard view path
             if (!controller) {
-                controller = resolvePath(name.replace(/-/g, "."), controllers).value;
+                controller = getController(ctrlName);
             }
 
             //if there is a controller then run the view
             if (!!controller) {
+                //see if the controller is stateless
+                if (!isStateless) {
+                    isStateless = funcInspector(controller).params.length < 3;
+                }
+                //if this is not stateless and we are missing a state, throw an error
                 if (!childState && !isStateless) {
                     renderedCb(new Error(simpleErrors.missingChildState.replace("{name}", id)));
                     return false;
@@ -237,6 +243,19 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
         }
 
         return id;
+    }
+    /**
+    * Attempts to resolve the controller, swallowing any errors
+    * @function
+    */
+    function getController(name) {
+        var ctrl;
+        try {
+            ctrl =  $container(name);
+        }
+        finally {
+            return ctrl;
+        }
     }
     /**
     * Appends the elements to the element parent
@@ -397,6 +416,7 @@ function _SimpleView(controllers, simpleTemplate, simpleErrors, simpleStyle, fun
             return view;
         }
         catch(ex) {
+            simpleReporter.error(ex);
             renderCb(ex);
         }
     };
