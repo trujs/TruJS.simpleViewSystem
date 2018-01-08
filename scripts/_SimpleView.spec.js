@@ -27,7 +27,7 @@ function simpleViewHelper(callback, module) {
         })
         , "toolbar":  {
             "view": callback(function (render) {
-                render(["<div>{:title:}</div>", "{:$tagName:} { background-color: blue; }"]);
+                render(["<div id='{:$attrs.id:}-div'>{:title:}{:$attributes.id:}</div>", "{:$tagName:} { background-color: blue; }"]);
                 return toolbarWatchers;
             })
         }
@@ -114,7 +114,7 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
 
         test("mainEl innerHTML should be")
         .value(simpleViewHelper.mainEl.innerHTML)
-        .equals("<toolbar id=\"toolbar1\"><div>Sub Title</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody id=\"mainbody\"><div>Name</div></mainbody><div></div>");
+        .equals("<toolbar id=\"toolbar1\"><div id=\"toolbar1-div\">Sub Titletoolbar1</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody id=\"mainbody\"><div>Name</div></mainbody><div></div>");
 
     });
 }

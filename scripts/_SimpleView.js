@@ -45,6 +45,14 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
                 "enumerable": true
                 , "value": view.element.className
             }
+            , "$attributes": {
+                "enumerable": true
+                , "value": view.attributes
+            }
+            , "$attrs": {
+                "enumerable": true
+                , "value": view.attributes
+            }
         });
     }
     /**
