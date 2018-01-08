@@ -1,7 +1,9 @@
 /**[@test({ "label": "simpleViewHelper", "type": "factory" })]*/
 function simpleViewHelper(callback, module) {
-    var watcher, mainHtml, controllers, mainBodyContext, toolbarWatchers, createElement;
+    var watcher, mainHtml, controllers, mainBodyContext, toolbarWatchers
+    , createElement, $container, resolvePath;
 
+    resolvePath = module(["TruJS.resolvePath", [], false]);
     watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
     createElement = module(".createElement");
     mainHtml = [
@@ -25,7 +27,7 @@ function simpleViewHelper(callback, module) {
         })
         , "toolbar":  {
             "view": callback(function (render) {
-                render(["<div>{:title:}</div>", "{:$tagName:} { background-color: blue; }"]);
+                render(["<div id='{:$attrs.id:}-div'>{:title:}{:$attributes.id:}</div>", "{:$tagName:} { background-color: blue; }"]);
                 return toolbarWatchers;
             })
         }
@@ -36,10 +38,14 @@ function simpleViewHelper(callback, module) {
         }
     };
 
+    $container = callback(function (path) {
+        return resolvePath(path.substring(13), controllers).value;
+    });
+
     return {
         "controllers": controllers
         , "mainEl": createElement('main')
-        , "simpleView": module(["TruJS.simpleViewSystem._SimpleView", [controllers]])
+        , "simpleView": module(["TruJS.simpleViewSystem._SimpleView", [$container]])
         , "state": watcher({
             "toolbar1": {
                 "title": "Title"
@@ -108,7 +114,7 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
 
         test("mainEl innerHTML should be")
         .value(simpleViewHelper.mainEl.innerHTML)
-        .equals("<toolbar id=\"toolbar1\"><div>Sub Title</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody id=\"mainbody\"><div>Name</div></mainbody><div></div>");
+        .equals("<toolbar id=\"toolbar1\"><div id=\"toolbar1-div\">Sub Titletoolbar1</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody id=\"mainbody\"><div>Name</div></mainbody><div></div>");
 
     });
 }

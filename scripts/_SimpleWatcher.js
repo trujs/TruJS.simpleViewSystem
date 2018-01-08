@@ -106,15 +106,14 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
                 }
                 //if there isn't a property then see if the key is on the prototype
                 if (!property && !!options.prototype && options.prototype.hasOwnProperty(key)) {
-                    options.prototype[cnsts.watch]([path], handler);
-                    return;
+                    guid = options.prototype[cnsts.watch]([path], handler);
                 }
                 //if the property doesn't exist then throw an error
-                if (!property) {
+                else if (!property) {
                     throw new Error(simpleErrors.missingProperty.replace("{key}", key));
                 }
                 //if there is only one segment then this is a local property
-                if (segments.length === 1) {
+                else if (segments.length === 1) {
                     guid = addHandler(
                         property
                         , handler

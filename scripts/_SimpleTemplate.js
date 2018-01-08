@@ -79,7 +79,13 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             processTextNode(element, context)
         }
         else {
-            if (element.hasAttribute("repeat")) {
+            if (element.hasAttribute("repeat") && element.hasAttribute("if")) {
+                processIfAttrib(element, context);
+                if (!!element.parentNode) {
+                    processRepeatAttrib(element, context);
+                }
+            }
+            else if (element.hasAttribute("repeat")) {
                 processRepeatAttrib(element, context);
             }
             else if (element.hasAttribute("if")) {
@@ -174,7 +180,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             }
         }
 
-        pass = doIf(element, expr, [element], [elseEl], context);
+        pass = doIf(element, expr, [element], !!elseEl && [elseEl], context);
 
         if(!pass) {
             element.parentNode.removeChild(element);
@@ -458,9 +464,11 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         delete element.watchers;
         element[cnsts.destroy] = function destroy() {
             //destroy the elements watchers
-            watchers.forEach(function (watcher) {
-                watcher.parent[cnsts.unwatch](watcher.guids);
-            });
+            if (isArray(watchers)) {
+                watchers.forEach(function (watcher) {
+                    watcher.parent[cnsts.unwatch](watcher.guids);
+                });
+            }
             //destroy the children
             destroyChildren(element);
         };

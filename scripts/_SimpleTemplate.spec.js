@@ -207,3 +207,35 @@ function testSimpleTemplate4(arrange, act, assert, callback, module) {
 
     });
 }
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: if and repeat attributes "})]*/
+function testSimpleTemplate5(arrange, act, assert, callback, module) {
+    var watcher, simpleTemplate, template, context, elements;
+
+    arrange(function () {
+        watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
+        template = [
+            "<div if='$show' repeat='$i in rows'>"
+            , "</div>"
+            , "<div repeat='$i in rows' if='$show'>"
+            , "</div>"
+        ].join("\n");
+        context = watcher({
+            "$show": false
+            , "rows": ["1","2","3"]
+        });
+    });
+
+    act(function () {
+        elements = simpleTemplate(template, context);
+    });
+
+    assert(function (test) {
+        test("elements should be")
+        .value(elements)
+        .stringify()
+        .equals("{}");
+
+    });
+}

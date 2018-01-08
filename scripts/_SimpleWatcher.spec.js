@@ -323,67 +323,6 @@ function testSimpleWatcher7(arrange, act, assert, callback, module) {
     });
 }
 
-/**[@test({ "title": "TruJS.simpleViewSystem._SimpleWatcher: prototype" })]*/
-function testSimpleWatcher8(arrange, act, assert, callback, module) {
-    var simpleWatcher, obj, watched, handler, proto1, proto2, innerName, outerName;
-
-    arrange(function () {
-        simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
-        proto1 = {
-            "name": "proto1"
-            , "key1": "protovalue1"
-        };
-        proto2 = {
-            "name": "proto2"
-        };
-        obj = {
-            "__proto": proto1
-            , "outer": {
-                "inner": {
-                    "__proto": proto2
-                }
-            }
-        };
-        handler = callback();
-    });
-
-    act(function () {
-        watched = simpleWatcher(obj);
-        watched.$watch(["name", "outer.inner.name"], handler); //add handler
-        innerName = watched.outer.inner.name;
-        outerName = watched.outer.name;
-        watched.name = "proto1.1";
-        watched.outer.inner.name = "proto1.2";
-    });
-
-    assert(function (test) {
-        test("handler should be called twice")
-        .value(handler)
-        .hasBeenCalled(2);
-
-        test("outerName should be")
-        .value(outerName)
-        .equals("proto1");
-
-        test("innerName should be")
-        .value(innerName)
-        .equals("proto2");
-
-        test("proto1.name should be")
-        .value(proto1.name)
-        .equals("proto1.1");
-
-        test("proto2.name should be")
-        .value(proto2.name)
-        .equals("proto1.2");
-
-        test("inner.key1 should be")
-        .value(watched, "outer.inner.key1")
-        .equals("protovalue1");
-
-    });
-}
-
 /**[@test({ "title": "TruJS.simpleViewSystem._SimpleWatcher: arrays" })]*/
 function testSimpleWatcher9(arrange, act, assert, callback, module) {
     var simpleWatcher, obj, watched, handler, len;
@@ -647,6 +586,57 @@ function testSimpleWatcher13(arrange, act, assert, callback, module) {
         test("handler should be called 7 times")
         .value(handler)
         .hasBeenCalled(7);
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleWatcher: $destroy with prototype" })]*/
+function testSimpleWatcher14(arrange, act, assert, callback, module) {
+    var simpleWatcher, obj, watched, handler, proto1, proto2, innerName
+    , outerName, err;
+
+    arrange(function () {
+        simpleWatcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        proto1 = {
+            "name": "proto1"
+            , "key1": "protovalue1"
+        };
+        proto2 = {
+            "name": "proto2"
+        };
+        obj = {
+            "__proto": proto1
+            , "outer": {
+                "inner": {
+                    "__proto": proto2
+                }
+            }
+        };
+        handler = callback();
+    });
+
+    act(function () {
+        watched = simpleWatcher(obj);
+        watched.$watch(["name"], handler);
+        watched.$destroy();
+        try {
+            watched.name = "$destroy";
+        }
+        catch(ex) {
+            err = ex;
+        }
+    });
+
+    assert(function (test) {
+        test("err should not be nill")
+        .value(err)
+        .not()
+        .isNill();
+
+        test("handler should not be called")
+        .value(handler)
+        .not()
+        .hasBeenCalled();
 
     });
 }
