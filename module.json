@@ -9,6 +9,8 @@
     , "arrayFromArguments": [".array.fromArguments"]
     , "funcAsync": ["TruJS.func._Async", []]
     , "funcInspector": ["TruJS.func._Inspector", []]
+    , "regEx": ["TruJS._RegEx", []]
+    , "regExForEachMatch": [".regEx.forEachMatch"]
     , "document": [":document"]
     , "getElementById": [".document.getElementById", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
     , "createElement": [".document.createElement", [], { "bind": { "scope": [".document"] }, "runFactory": false }]

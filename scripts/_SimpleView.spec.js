@@ -114,7 +114,7 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
 
         test("mainEl innerHTML should be")
         .value(simpleViewHelper.mainEl.innerHTML)
-        .equals("<toolbar id=\"toolbar1\"><div id=\"toolbar1-div\">Sub Titletoolbar1</div><style>\ntoolbar { background-color: blue; }\n</style></toolbar><mainbody id=\"mainbody\"><div>Name</div></mainbody><div></div>");
+        .equals("<toolbar id=\"toolbar1\"><div id=\"toolbar1-div\">Sub Titletoolbar1</div><style>\ntoolbar {\n\tbackground-color: blue;\n}\n</style></toolbar><mainbody id=\"mainbody\"><div>Name</div></mainbody><div></div>");
 
     });
 }
