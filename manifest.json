@@ -1,24 +1,28 @@
-[{
-    "type": "module"
-    , "name": "TruJS.simpleViewSystem"
+{
+    "name": "TruJS.simpleViewSystem"
     , "version": "0.0.4"
+    , "entries": [
+        {
+            "type": "module"
 
-    , "hints": {
-        "TruJS": "{repos}/TruJS"
-    }
+            , "repos": [
+                {
+                    "type": "git"
+                    , "name": "TruJS"
+                    , "url": "https://github.com/trujs/TruJS.git"
+                    , "branch": "version-0.1"
+                }
+            ]
 
-    , "module": {
-        "document": [":document"]
-    }
+            , "format": "browser"
+            , "minify": false
+            , "namespace": "SVS"
+        }, {
+            "type": "test"
 
-    , "format": "browser"
-    , "minify": false
-    , "namespace": "SVS"
-}, {
-    "type": "test"
-    , "name": "TruJS.simpleViewSystem"
+            , "format": "browser"
 
-    , "format": "browser"
-
-    , "output": "./builds/{name}/"
-}]
+            , "output": "./builds/{name}/"
+        }
+    ]
+}
