@@ -1,11 +1,15 @@
 /**
 * This factory produces a worker function that processes an html template with
 * an object.
-* 1. The data is merged with the template
-* 2. The template is converted to an html element
-* 3. If tags are processed
-* 4. Repeat tags are processed
-* 5. Bind input tags
+* 1. converts the text to html
+* 2. creates a template context, prototype chaining special template properties
+*    and the data:
+*   - {element}   $element          The element that that is being processed
+* 3. processes the root element's children
+*   - process tag
+*   - process tag's attributes
+*   - process tag's children
+* 4. returns the root element's children
 * @factory
 */
 function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, simpleMixin) {
@@ -27,19 +31,55 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * Converts the html string into html elements wrapped in a span
     * @function
     */
-    function convertHtml(template) {
-        var el = createElement('div');
-        el.innerHTML = template;
-        return el;
+    function convertHtml(tag, template, context) {
+        //convert the tag to an element if it is not
+        if (!isElement(tag)) {
+            tag = createElement(tag || "div");
+        }
+        //add the inner html to the tag
+        tag.innerHTML = template;
+
+        return tag;
+    }
+    /**
+    *
+    * @function
+    */
+    function processSelfTag(element, context) {
+        var self = element.children[0]
+        , attrs = Array.prototype.slice.apply(self.attributes)
+        , children = Array.prototype.slice.apply(self.childNodes)
+        , removeList = []
+        ;
+        //bind the attributes and add them to the element
+        attrs.forEach(function (attr) {
+            self.removeAttributeNode(attr);
+            element.setAttributeNode(attr);
+            if (processAttribute(element, context, attr)) {
+                removeList.push(attr);
+            }
+        });
+        //remove any on attributes that we added handlers for
+        removeList.forEach(function forEachRem(attr) {
+            element.removeAttributeNode(attr);
+        });
+        //move the children
+        children.forEach(function (node) {
+            if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
+                element.insertBefore(node, self);
+            }
+        });
+        //remove the self element
+        self.parentNode.removeChild(self);
     }
     /**
     * Begins the element processing, resolves/rejects the promise
     * @function
     */
-    function process(node, data) {
+    function process(node, context) {
         //create the starting context object and start processing the node
         if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
-            processElement(node, createContext(data, node));
+            processElement(node, context);
         }
     }
     /**
@@ -47,12 +87,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * @function
     */
     function createContext(data, element) {
-        return Object.create(data, {
-            "$parentElement": {
-                "enumerable": true
-                , "value": element
-            }
-        });
+        return Object.create(data);
     }
     /**
     * Processes the element including special tags, if and repeat, and
@@ -268,15 +303,8 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             ;
 
             attribs.forEach(function forEachAttr(attr) {
-                //reset the regex
-                TAG_PATT.lastIndex = 0;
-                //check for on{event} attributes
-                if (attr.name.indexOf("on") === 0 && TAG_PATT.exec(attr.value) !== null) {
-                    addEventHandler(element, attr, context);
+                if (processAttribute(element, context, attr)) {
                     removeList.push(attr);
-                }
-                else {
-                    processAttribute(element, context, attr);
                 }
             });
             //remove any on attributes that we added handlers for
@@ -291,6 +319,14 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * @function
     */
     function processAttribute(element, context, attr) {
+        //reset the regex
+        //check for on{event} attributes
+        TAG_PATT.lastIndex = 0;
+        if (attr.name.indexOf("on") === 0 && TAG_PATT.exec(attr.value) !== null) {
+            addEventHandler(element, attr, context);
+            return true;
+        }
+
         //process the attrib value and see if we have keys
         var expr = attr.value
         , name = attr.name
@@ -431,7 +467,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 });
             }
         });
-
+        element.watchers = element.watchers || [];
         element.watchers = element.watchers.concat(watchers);
     }
     /**
@@ -492,16 +528,31 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     /**
     * @worker
     */
-    return function SimpleTemplate(template, data) {
-        //template could ben an array
+    return function SimpleTemplate(tag, template, data) {
+        if (isNill(data) && isString(tag)) {
+            data = template;
+            template = tag;
+            tag = null;
+        }
+        //template could be an array
         if(isArray(template)) {
             template = template.join("\n");
         }
 
-        var element = convertHtml(template);
+        var element = convertHtml(tag, template)
+        , context = createContext(data, element);
 
-        process(element, data);
+        //if there is a self child tag then apply it's attributes to the tag
+        if (element.children[0].tagName === "SELF") {
+            processSelfTag(element, context);
+        }
 
-        return element.childNodes;
+        //process each child
+        return Array.prototype.slice.apply(element.childNodes)
+        .map(function forEachChild(child, indx) {
+            process(child, context);
+            return child;
+        });
+
     };
 }
