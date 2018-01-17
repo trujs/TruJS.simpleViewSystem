@@ -239,3 +239,56 @@ function testSimpleTemplate5(arrange, act, assert, callback, module) {
 
     });
 }
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: self ","format":"browser"})]*/
+function testSimpleTemplate6(arrange, act, assert, callback, module) {
+    var createElement, watcher, simpleTemplate, template, context, elements, root, func;
+
+    arrange(function () {
+        createElement = module([".createElement"]);
+        watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
+        template = [
+            "<self myattr1=\"{:rows[0]:}\" attr2=\"{:$show:}\" onclick=\"{:func:}\">"
+            , "<div if='$show' repeat='$i in rows'>"
+            , "</div>"
+            , "<div repeat='$i in rows' if='$show'>"
+            , "</div>"
+            , "</self>"
+        ].join("\n");
+        func = callback();
+        context = Object.create(watcher({
+            "$show": false
+            , "rows": ["1","2","3"]
+            , "func": func
+        }));
+        root = createElement("main");
+    });
+
+    act(function (done) {
+        elements = simpleTemplate(root, template, context);
+        context.rows[0] = "4";
+        context.$show = true;
+        root.click();
+        done(100);
+    });
+
+    assert(function (test) {
+        test("the parent node should have 2 attributes")
+        .value(root.attributes.length)
+        .equals(2);
+
+        test("the parent 1st attribute shoud be")
+        .value(root.attributes[0], "value")
+        .equals("4");
+
+        test("the parent 2nd attribute shoud be")
+        .value(root.attributes[1], "value")
+        .equals("true");
+
+        test("func should be called once")
+        .value(func)
+        .hasBeenCalled(1);
+
+    });
+}

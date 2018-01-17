@@ -7,9 +7,11 @@ function simpleViewHelper(callback, module) {
     watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
     createElement = module(".createElement");
     mainHtml = [
-        "<toolbar id='toolbar1'></toolbar>"
+        "<self onclick=\"{:func:}\">"
+        , "<toolbar id='toolbar1'></toolbar>"
         , "<mainbody id='mainbody'></mainbody>"
         , "<div></div>"
+        , "</self>"
     ].join("\n");
 
     mainBodyContext = {
@@ -61,10 +63,11 @@ function simpleViewHelper(callback, module) {
 
 /**[@test({ "title": "TruJS.simpleViewSystem._SimpleView: simple test" })]*/
 function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
-    var renderCb, err, view;
+    var renderCb, err, view, reporter, context;
 
     arrange(function () {
-
+        context = Object.create(simpleViewHelper.state);
+        context.func = callback();
     });
 
     act(function (done) {
@@ -82,9 +85,11 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
         view = simpleViewHelper.simpleView(
             simpleViewHelper.mainEl
             , simpleViewHelper.controllers["main"]
-            , simpleViewHelper.state
+            , context
             , renderCb
         );
+
+        view.element.click();
     });
 
     assert(function (test) {
@@ -110,6 +115,10 @@ function testSimpleView1(arrange, act, assert, callback, simpleViewHelper) {
 
         test("mainBodyContext.$destroy should be called once")
         .value(simpleViewHelper.mainBodyContext.$destroy)
+        .hasBeenCalled(1);
+
+        test("state.func should be called once")
+        .value(context.func)
         .hasBeenCalled(1);
 
         test("mainEl innerHTML should be")

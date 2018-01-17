@@ -142,6 +142,14 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
                 view.htmlTemplate = template;
             }
         }
+
+        //convert the css and html template arrays
+        if (isArray(view.cssTemplate)) {
+            view.cssTemplate = view.cssTemplate.join("\n\n");
+        }
+        if (isArray(view.htmlTemplate)) {
+            view.htmlTemplate = view.htmlTemplate.join("\n\n");
+        }
     }
     /**
     * Processes the html and css templates
@@ -152,7 +160,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         if (!!view.htmlTemplate) {
             //process the html and get the elements
             view.children = Array.prototype.slice.apply(
-                simpleTemplate(view.htmlTemplate, view.stateContext)
+                simpleTemplate(view.element, view.htmlTemplate, view.stateContext)
             );
         }
 
@@ -170,16 +178,6 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     */
     function processElements(elements, state, renderedCb) {
         var error, renderCnt = elements.length, views = [];
-
-        function renderCb(err) {
-            renderCnt--;
-            if (!!err && !error) {
-                error = err;
-            }
-            if (renderCnt <= 0) {
-                renderedCb(error);
-            }
-        }
 
         //loop through the elements until finished or an error occurs
         elements.every(function forEachElement(element) {
@@ -234,6 +232,17 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             //continue the loop
             return true;
         });
+
+        //render callback aggrigator
+        function renderCb(err) {
+            renderCnt--;
+            if (!!err && !error) {
+                error = err;
+            }
+            if (renderCnt <= 0) {
+                renderedCb(error);
+            }
+        }
 
         return views;
     }
