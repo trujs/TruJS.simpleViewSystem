@@ -12,7 +12,7 @@
 * 4. returns the root element's children
 * @factory
 */
-function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, simpleMixin) {
+function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, simpleMixin, simpleMethods, arrayFromArguments) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^[ \t\n\r]+$/
     , TRIM_PATT = /^[\n\r\t ]+(.*?)[\n\r\t ]+$/
@@ -76,27 +76,40 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * Begins the element processing, resolves/rejects the promise
     * @function
     */
-    function process(node, context) {
+    function process(node, data) {
         //create the starting context object and start processing the node
         if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
-            processElement(node, context);
+            processElement(node, data);
         }
     }
     /**
     * Create the context object, making data the prototype
     * @function
     */
-    function createContext(data, element) {
-        return Object.create(data);
+    function createContext(element, data) {
+        var context = Object.create(data);
+
+        Object.keys(simpleMethods)
+        .forEach(function (key) {
+            context[key] = runMethod.bind(null, element);
+            function runMethod() {
+                var args = arrayFromArguments(arguments);
+                simpleMethods[key].apply(null, args);
+            }
+        });
+
+        //set the element on the context
+        context["$element"] = element;
+
+        return context;
     }
     /**
     * Processes the element including special tags, if and repeat, and
     * processes it's shildren
     * @function
     */
-    function processElement(element, context) {
-        //set the element on the context
-        context["$element"] = element;
+    function processElement(element, data) {
+        var context = createContext(element, data);
         //a temporary container for watchers
         element.watchers = [];
         //see if this is a repeat
@@ -118,6 +131,9 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 processIfAttrib(element, context);
                 if (!!element.parentNode) {
                     processRepeatAttrib(element, context);
+                }
+                else {
+                    element.removeAttribute("repeat");
                 }
             }
             else if (element.hasAttribute("repeat")) {
@@ -539,20 +555,16 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             template = template.join("\n");
         }
 
-        var element = convertHtml(tag, template)
-        , context = createContext(data, element);
+        var element = convertHtml(tag, template);
 
         //if there is a self child tag then apply it's attributes to the tag
         if (element.children[0].tagName === "SELF") {
-            processSelfTag(element, context);
+            processSelfTag(element, data);
         }
 
-        //process each child
-        return Array.prototype.slice.apply(element.childNodes)
-        .map(function forEachChild(child, indx) {
-            process(child, context);
-            return child;
-        });
+        //process the element
+        process(element, data);
 
+        return element.childNodes;
     };
 }

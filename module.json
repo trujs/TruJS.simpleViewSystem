@@ -15,6 +15,9 @@
     , "getElementById": [".document.getElementById", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
     , "createElement": [".document.createElement", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
     , "createTextNode": [".document.createTextNode", [], { "bind": { "scope": [".document"] }, "runFactory": false }]
+    , "classHelper": ["TruJS.dom._ClassHelper", []]
+    , "styleHelper": ["TruJS.dom._StyleHelper", []]
+    , "elementHelper": ["TruJS.dom._ElementHelper", []]
     , "simpleErrors": ["TruJS.simpleViewSystem.SimpleErrors", [], false]
     , "simpleReporter": ["TruJS.log._Reporter", []]
     , "simpleExpression": ["TruJS.simpleViewSystem._SimpleExpression", []]
@@ -26,4 +29,13 @@
     , "simpleView": ["TruJS.simpleViewSystem._SimpleView", []]
     , "simpleViewPort": ["TruJS.simpleViewSystem._SimpleViewPort", []]
     , "simpleDefaultController": ["TruJS.simpleViewSystem._SimpleDefaultController", [], false]
+    , "simpleMethods": [{
+        "$update": ["TruJS.simpleViewSystem.simpleMethods._UpdateAttribute", []]
+        , "$delete": ["TruJS.simpleViewSystem.simpleMethods._DeleteAttribute", []]
+        , "$addClass": ["TruJS.simpleViewSystem.simpleMethods._AddClass", []]
+        , "$delClass": ["TruJS.simpleViewSystem.simpleMethods._DeleteClass", []]
+        , "$toggleClass": ["TruJS.simpleViewSystem.simpleMethods._ToggleClass", []]
+        , "$updStyle": ["TruJS.simpleViewSystem.simpleMethods._UpdateStyle", []]
+        , "$delStyle": ["TruJS.simpleViewSystem.simpleMethods._DeleteStyle", []]
+    }]
 }
