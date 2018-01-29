@@ -294,10 +294,10 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             }
 
             //set the node value to the result
-            el.innerHTML = result.value
-                .replace(LN_END_PATT, "<br>")
-                .replace(SPC_PATT, "&nbsp;")
-                .replace(TAB_PATT, "&#9;");
+            el.innerHTML = result.value;
+                //.replace(LN_END_PATT, "<br>")
+                //.replace(SPC_PATT, "&nbsp;")
+                //.replace(TAB_PATT, "&#9;");
 
             //add the watchers
             if (result.keys.length > 0) {
@@ -315,7 +315,6 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         if (!!element.attributes) {
             var removeList = []
             , attribs = Array.prototype.slice.apply(element.attributes)
-            , repeatExpr
             ;
 
             attribs.forEach(function forEachAttr(attr) {
@@ -335,10 +334,8 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * @function
     */
     function processAttribute(element, context, attr) {
-        //reset the regex
         //check for on{event} attributes
-        TAG_PATT.lastIndex = 0;
-        if (attr.name.indexOf("on") === 0 && TAG_PATT.exec(attr.value) !== null) {
+        if (attr.name.indexOf("on") === 0) {
             addEventHandler(element, attr, context);
             return true;
         }

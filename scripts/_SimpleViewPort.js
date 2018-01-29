@@ -3,6 +3,7 @@
 * @factory
 */
 function _SimpleViewPort(controllers_view, createElement, simpleView) {
+    var curState, curView;
 
     /**
     * @worker
@@ -12,7 +13,20 @@ function _SimpleViewPort(controllers_view, createElement, simpleView) {
             var element = createElement("main")
             , loaded = false;
 
-            simpleView(element, controllers_view, state, renderCb);
+            //if there is a current view then destroy it
+            if (!!curView) {
+                curView.$destroy();
+            }
+            //if there is a current state then destroy it
+            if (!!curState) {
+                curState.$destroy();
+            }
+            //save a reference to the state so if this function is called again
+            // we can destroy it
+            curState = state;
+
+            //render the main view
+            curView = simpleView(element, controllers_view, state, renderCb);
 
             function renderCb(err) {
                 if (!loaded) {

@@ -192,14 +192,9 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             , id = element.id || generateId(name)
             , isStateless = element.hasAttribute("stateless")
             , ctrlName = ".controllers." + name.replace(/-/g, ".")
-            , controller = getController(ctrlName + ".view")
+            , controller = getController(ctrlName)
             , childState = getChildState(id, state)
             ;
-
-            //manual entries that don't have the standard view path
-            if (!controller) {
-                controller = getController(ctrlName);
-            }
 
             //if there is a controller then run the view
             if (!!controller) {
@@ -267,11 +262,19 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     */
     function getController(name) {
         var ctrl;
-        try {
+        if ($container.hasDependency(name.substring(1))) {
             ctrl =  $container(name);
+            //make sure we didn't find an object dependency
+            if (isFunc(ctrl)) {
+                return ctrl;
+            }
         }
-        finally {
-            return ctrl;
+        if ($container.hasDependency(name.substring(1) + ".view")) {
+            ctrl =  $container(name + ".view");
+            //make sure we didn't find an object dependency
+            if (isFunc(ctrl)) {
+                return ctrl;
+            }
         }
     }
     /**
