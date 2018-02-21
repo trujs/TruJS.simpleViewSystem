@@ -158,17 +158,16 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     function processTemplates(view) {
         //if we have am html template then process it
         if (!!view.htmlTemplate) {
+            view.element =
+                simpleTemplate(view.element, view.htmlTemplate, view.stateContext);
             //process the html and get the elements
-            view.children = Array.prototype.slice.apply(
-                simpleTemplate(view.element, view.htmlTemplate, view.stateContext)
-            );
+            view.children = ensureArray(view.element.childNodes);
         }
 
         //add the style element
         if (!!view.cssTemplate) {
-            view.children.push(
-                simpleStyle(view.cssTemplate, view.stateContext)
-            );
+            view.style = simpleStyle(view.cssTemplate, view.stateContext);
+            view.children.push(view.style);
         }
     }
     /**

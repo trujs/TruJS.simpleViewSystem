@@ -24,7 +24,7 @@ function testSimpleTemplate1(arrange, act, assert, callback, module) {
 
     act(function () {
         try {
-            res = simpleTemplate(template, data);
+            res = simpleTemplate(template, data).childNodes;
             res[0].childNodes[1].click();
         }
         catch(ex) {
@@ -69,10 +69,12 @@ function testSimpleTemplate1(arrange, act, assert, callback, module) {
 
 /**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: conditional statements ","format":"browser"})]*/
 function testSimpleTemplate2(arrange, act, assert, callback, module) {
-    var simpleTemplate, template, data, res;
+    var simpleTemplate, template, data, res, createElement, main;
 
     arrange(function () {
+        createElement = module(".createElement");
         simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
+        main = createElement("main");
         template = [
             "<div>"
             , "<if expr=\"{:obj is [object]:}\">"
@@ -95,7 +97,7 @@ function testSimpleTemplate2(arrange, act, assert, callback, module) {
 
     act(function () {
         try {
-            res = simpleTemplate(template, data);
+            res = simpleTemplate(main, template, data).childNodes;
         }
         catch(ex) {
             res = ex;
@@ -143,7 +145,7 @@ function testSimpleTemplate3(arrange, act, assert, callback, module) {
 
     act(function () {
         try {
-            res = simpleTemplate(template, data);
+            res = simpleTemplate(template, data).childNodes;
         }
         catch(ex) {
             res = ex;
@@ -184,7 +186,7 @@ function testSimpleTemplate4(arrange, act, assert, callback, module) {
 
     act(function () {
         try {
-            elements = simpleTemplate(template, context);
+            elements = simpleTemplate(template, context).childNodes;
 
             elements[0].$destroy();
             context.str1 = "Sub Title";
@@ -210,16 +212,18 @@ function testSimpleTemplate4(arrange, act, assert, callback, module) {
 
 /**[@test({ "title": "TruJS.simpleViewSystem._SimpleTemplate: if and repeat attributes ","format":"browser"})]*/
 function testSimpleTemplate5(arrange, act, assert, callback, module) {
-    var watcher, simpleTemplate, template, context, elements;
+    var watcher, createElement, simpleTemplate, template, context, elements;
 
     arrange(function () {
         watcher = module(["TruJS.simpleViewSystem._SimpleWatcher", []]);
+        createElement = module([".createElement"]);
         simpleTemplate = module(["TruJS.simpleViewSystem._SimpleTemplate", []]);
+        parent = createElement("main");
         template = [
             "<div if='$show' repeat='$i in rows'>"
             , "ARepeat{:$i:}"
             , "</div>"
-            , "<div repeat='$i in rows'>"
+            , "<div repeat='$i in rows' if='$i != 1'>"
             , "BRepeat{:$i:}"
             , "</div>"
         ].join("\n");
@@ -230,17 +234,17 @@ function testSimpleTemplate5(arrange, act, assert, callback, module) {
     });
 
     act(function () {
-        elements = simpleTemplate(template, context);
+        element = simpleTemplate(parent, template, context);
     });
 
     assert(function (test) {
         test("elements should have 3 members")
-        .value(Array.prototype.slice.apply(elements))
-        .hasMemberCountOf(3)
+        .value(Array.prototype.slice.apply(element.childNodes))
+        .hasMemberCountOf(2)
 
-        test("elements[0].outerHTML should be")
-        .value(elements,"[0].outerHTML")
-        .equals("<div>BRepeat0</div>");
+        test("element.outerHTML should be")
+        .value(element,"outerHTML")
+        .equals("<main><div>BRepeat0</div><div>BRepeat2</div></main>");
 
     });
 }
@@ -271,7 +275,7 @@ function testSimpleTemplate6(arrange, act, assert, callback, module) {
     });
 
     act(function (done) {
-        elements = simpleTemplate(root, template, context);
+        elements = simpleTemplate(root, template, context).childNodes;
         context.rows[0] = "4";
         context.$show = true;
         root.click();
@@ -279,8 +283,8 @@ function testSimpleTemplate6(arrange, act, assert, callback, module) {
     });
 
     assert(function (test) {
-        test("the parent node should have 2 attributes")
-        .value(root.attributes.length)
+        test("the parent node should have 2 attributes") //the onclick attrib
+        .value(root.attributes.length)                   // should be removed
         .equals(2);
 
         test("the parent 1st attribute shoud be")
@@ -307,22 +311,23 @@ function testSimpleTemplate7(arrange, act, assert, module) {
         createElement = module([".createElement"]);
         main = createElement('main');
         template = [
-            , "<div onclick=\"{:('div','test')=>$toggleClass:}\">"
-            , "    <div class=\"test\"></div>"
+            , "<div onclick=\"{:($screen,'div')=>$toggleClass:}\">"
+            , "    <div class=\"login\"></div>"
             , "    <div onclick=\"{:('test-class1')=>$addClass:}\"></div>"
+            , "    <div onclick=\"{:('$screen','main')=>$setValue:}\"></div>"
             , "</div>"
         ]
         .join("\n");
         data = {
-
+            "$screen": "login"
         };
     });
 
     act(function () {
-        element = simpleTemplate(main, template, data)[0];
-        element.click();
-        element.children[0].click();
+        element = simpleTemplate(main, template, data).childNodes[0];
+        element.children[0].click(); //this bubbles up to the parent handler since we didn't add a handler to it
         element.children[1].click();
+        element.children[2].click();
     });
 
     assert(function (test) {
@@ -332,7 +337,11 @@ function testSimpleTemplate7(arrange, act, assert, module) {
 
         test("the div element's 1st child should have a class")
         .value(element, "children[1].className")
-        .equals("test-class1 test");
+        .equals("login test-class1");
+
+        test("$screen should be")
+        .value(data, "$screen")
+        .equals("main");
 
     });
 }

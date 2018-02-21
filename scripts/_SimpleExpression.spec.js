@@ -130,15 +130,15 @@ function testSimpleExpression2(arrange, act, assert, smplExprHelper, module) {
           .value(res, "[0].val")
           .equals("0");
 
-        test("res[0] should be")
+        test("res[1] should be")
           .value(res, "[1].val")
           .equals("1");
 
-        test("res[0] should be")
+        test("res[2] should be")
           .value(res, "[2].val")
           .equals("2");
 
-        test("res[0] should be")
+        test("res[3] should be")
           .value(res, "[3].val")
           .isUndef();
 
@@ -422,6 +422,34 @@ function testSimpleExpression10(arrange, act, assert, smplExprHelper, module) {
         .value(res)
         .stringify()
         .equals("{\"$k\":\"0\",\"$i\":0,\"$v\":1}");
+
+    });
+}
+
+/**[@test({ "title": "TruJS.simpleViewSystem._SimpleExpression: iterator using for" })]*/
+function testSimpleExpression11(arrange, act, assert, smplExprHelper, module) {
+    var simpleExpression, expr, iter, res;
+
+    arrange(function () {
+        simpleExpression = module(["TruJS.simpleViewSystem._SimpleExpression", []]);
+        expr = "$i for 8 step -2";
+        res = [];
+    });
+
+    act(function () {
+        iter = simpleExpression(expr, smplExprHelper);
+        res[0] = iter.iterator.next();
+        res[1] = iter.iterator.next();
+        res[2] = iter.iterator.next();
+        res[3] = iter.iterator.next();
+        res[4] = iter.iterator.next();
+    });
+
+    assert(function (test) {
+        test("res should be")
+        .value(res)
+        .stringify()
+        .equals("[{\"$i\":\"7\"},{\"$i\":\"5\"},{\"$i\":\"3\"},{\"$i\":\"1\"},null]");
 
     });
 }

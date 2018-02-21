@@ -1,0 +1,7 @@
+{
+    "value": "$value"
+    , "destroy": "$destroy"
+    , "watch": "$watch"
+    , "unwatch": "$unwatch"
+    , "standardAttribute": "standard"
+}

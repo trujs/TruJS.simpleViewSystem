@@ -6,4 +6,5 @@
     , "missingChildState": "[MissingChildState] The child state '{name}' was not found in the views's context."
     , "missingProperty": "[MissingProperty] The property '{key}' does not exist in this object."
     , "destroyed": "[Destroyed] Unable to access the key {key}. The watcher has been destroyed an should no longer be used."
+    , "attributeSameElement": "[Map:AttributeSameElement] The attribute target is the same as the attribute's current element."
 }
