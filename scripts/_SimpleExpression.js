@@ -25,8 +25,8 @@
 * @factory
 */
 function _SimpleExpression(arrayFromArguments) {
-    var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
-    , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? in ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
+    var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|in|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
+    , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?(?: step ([-]?[0-9]+))?$/i
     , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
     , BIND_FUNC_PATT = /^\(([^)]+)\) ?=> ?([A-Za-z0-9$.,()'\[\]_]+)$/
@@ -34,6 +34,8 @@ function _SimpleExpression(arrayFromArguments) {
     , ARRAY_PATT = /^\[([A-Za-z0-9$.()_'\[\],]+)\]$/
     , TYPE_PATT = /^\[([a-z]+)\]$/
     , INDX_PATT = /.*\]$/
+    , OR_PATT = / \|\| /
+    , AND_PATT = / \&\& /
     ;
 
     /**
@@ -41,19 +43,81 @@ function _SimpleExpression(arrayFromArguments) {
     * @function
     */
     function evaluate(expression, data) {
-        var match;
-        //see if this is an iterator
-        if (!!(match = ITER_PATT.exec(expression))) {
-            return evaluateIterator(match, data);
+        //split the expression into [ors], then the [ors] into [ands]
+        //, making [ors][ands], then loop through each [or], and each [or's]
+        // [ands] recording the final result from a passed [and]
+        var ors = expression.split(OR_PATT)
+            .map(function mapExp(exp) {
+                return exp.split(AND_PATT);
+            })
+        , keys = []
+        //evaluate all of the [ors]
+        , finalResult = evaluateOrs(data, ors, keys)
+        ;
+
+        //if the result expression isn't the original then set the final expr
+        if (finalResult.expression !== expression) {
+            finalResult.finalExpression = finalResult.expression;
+            finalResult.expression = expression;
         }
-        //maybe a conditional statement
-        else if (!!(match = COND_PATT.exec(expression))) {
-            return evaluateConditional(match, data);
+
+        //add all of the keys to the last result
+        finalResult.keys = keys;
+
+        return finalResult;
+    }
+    /**
+    * Loops through the [ors] array, evaluating each [or's] [and] array, the
+    * first [and] array that returns a result, sets the final result; further
+    * processing is to record the keys only
+    * @function
+    */
+    function evaluateOrs(data, ors, keys) {
+        var finalResult, result;
+
+        ors.forEach(function forEachOr(ands) {
+            result = evaluateAnds(data, ands, keys);
+            if (!!result.result && !finalResult) {
+                finalResult = result;
+            }
+        });
+
+        //if we didn't pass then use the last evaulated result
+        if (!finalResult) {
+            return result;
         }
-        //otherwise its a value expression
-        else {
-            return evaluateValue(expression, data);
-        }
+
+        return finalResult;
+    }
+    /**
+    * Loop through an [or's] [and] array, appending any keys, returning the
+    * result of the last [and], or null if not all [ands] return truthy
+    * @function
+    */
+    function evaluateAnds(data, ands, keys) {
+        var result;
+
+        ands.forEach(function (expr) {
+            var match;
+            //see if this is an iterator
+            if (!!(match = ITER_PATT.exec(expr))) {
+                result = evaluateIterator(match, data);
+            }
+            //maybe a conditional statement
+            else if (!!(match = COND_PATT.exec(expr))) {
+                result = evaluateConditional(match, data);
+            }
+            //otherwise its a value expression
+            else {
+                result = evaluateValue(expr, data);
+            }
+            //add the result's keys
+            result.keys.forEach(function forEachKey(key) {
+                keys.push(key);
+            });
+        });
+
+        return result;
     }
     /**
     * Evaluates the iteration expression and returns an iterator
@@ -68,10 +132,14 @@ function _SimpleExpression(arrayFromArguments) {
             , "key": keyVar
             , "val": valVar
         }
-        , res = evaluateValue(match[4], data)
-        , coll = filterCollection(res.result, match[7], vars, data)
-        , sort = match[5]
-        , dir = match[6] || "asc"
+        , op = match[4]
+        , res = evaluateValue(match[5], data)
+        , set = op === "in" && res.result || (new Array(res.result)).fill("")
+        , sort = match[6]
+        , dir = match[7] || "asc"
+        , filter = match[8]
+        , step = isNumeric(match[9]) && parseInt(match[9]) || 1
+        , coll = filterCollection(set, filter, vars, data)
         , keys = Object.keys(coll)
         , indx = 0
         , expr = {
@@ -101,6 +169,10 @@ function _SimpleExpression(arrayFromArguments) {
                 return 1;
             });
         }
+        //if the step is negative then reverse the order
+        if (step < 0) {
+            indx = keys.length - 1;
+        }
         //create the iterator
         expr.iterator = Object.create(null, {
             "vars": {
@@ -120,13 +192,13 @@ function _SimpleExpression(arrayFromArguments) {
             }
             , "next": {
                 "value": function next() {
-                    if (indx < keys.length) {
+                    if (indx < keys.length && indx >= 0) {
                         var key = keys[indx]
                         , context = Object.create(data);
                         context[vars.key] = key;
                         !!vars.indx && (context[vars.indx] = indx);
                         !!vars.val && (context[vars.val] = coll[key]);
-                        indx++;
+                        indx+=step;
                         return context;
                     }
                 }
@@ -212,6 +284,9 @@ function _SimpleExpression(arrayFromArguments) {
                 break;
             case "<=":
                 expr.result = sideA <= sideB;
+                break;
+            case "in":
+                expr.result = sideB.indexOf(sideA) !== -1;
                 break;
             default:
                 expr.result = sideA === sideB;

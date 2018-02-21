@@ -17,12 +17,22 @@
             , "format": "browser"
             , "minify": false
             , "namespace": "SVS"
-        }, {
+        }
+        , {
             "type": "test"
 
             , "format": "browser"
 
             , "output": "./builds/{name}/"
+        }
+        , {
+            "type": "test"
+
+            , "testEntry": "0"
+            , "scripts": "tests"
+            , "format": "browser"
+
+            , "output": "./builds/{name}/functional.test.json"
         }
     ]
 }
