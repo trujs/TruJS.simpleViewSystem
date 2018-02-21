@@ -1,13 +1,13 @@
 /**
-*
+* Toggles the attribute of an element
 * @factory
 */
-function _DeleteClass(classHelper) {
+function _ToggleAttribute(attributeHelper) {
 
     /**
     * @worker
     */
-    return function DeleteClass(event, root, className, selector) {
+    return function ToggleAttribute(event, root, attributeName, selector) {
         var elements;
         if (!!selector) {
             elements = root.querySelectorAll(selector);
@@ -17,7 +17,7 @@ function _DeleteClass(classHelper) {
         }
         if (!isEmpty(elements)) {
             elements.forEach(function forEachEl(el) {
-                classHelper.remove(el, className);
+                attributeHelper.toggle(el, attributeName);
             });
         }
     };

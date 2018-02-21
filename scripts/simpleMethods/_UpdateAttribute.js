@@ -2,50 +2,25 @@
 *
 * @factory
 */
-function _UpdateAttribute() {
+function _UpdateAttribute(attributeHelper) {
 
     /**
     * @worker
     */
-    return function UpdateAttribute(root, selector, attributes, attributeValue, event) {
-        var elements = [root];
-
-        if (isEvent(attributeValue)) {
-            event = attributeValue
-            if (!isObject(attributes)) {
-                attributeValue = attributes;
-                attributes = selector;
-                selector = null;
-            }
-        }
-        if (isNill(attributeValue)) {
-            if (!isObject(attributes)) {
-                attributeValue = attributes;
-                attributes = selector;
-                selector = null;
-            }
-        }
-        if (isObject(selector)) {
-            if (isEvent(attributes)) {
-                event = attributes;
-            }
-            attributes = selector;
-            selector = null;
+    return function UpdateAttribute(event, root, attributes, attributeValue, selector) {
+        var elements;
+        if (isObject(attributes)) {
+            selector = attributeValue;
         }
         if (!!selector) {
             elements = root.querySelectorAll(selector);
         }
+        else {
+            elements = [event.target];
+        }
         if (!isEmpty(elements)) {
             elements.forEach(function forEachEl(el) {
-                if (isObject(attributes)) {
-                    Object.keys(attributes)
-                    .forEach(function forEachAttr(key) {
-                        el.setAttribute(key, attributes[key]);
-                    });
-                }
-                else {
-                    el.setAttribute(attributes, attributeValue);
-                }
+                attributeHelper.update(el, attributes, attributeValue);
             });
         }
     };
