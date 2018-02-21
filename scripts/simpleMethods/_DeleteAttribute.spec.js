@@ -1,10 +1,14 @@
 /**[@test({ "title": "TruJS.simpleViewSystem.simpleMethods._DeleteAttribute: selector" })]*/
 function testDeleteAttribute1(arrange, act, assert, module) {
-    var deleteAttribute, createElement;
+    var deleteAttribute, createElement, target, element;
 
     arrange(function () {
         createElement = module([".createElement"]);
         deleteAttribute = module(["TruJS.simpleViewSystem.simpleMethods._DeleteAttribute", []]);
+        target = createElement("main");
+        target.onclick = function (e) {
+            deleteAttribute(e, element, "test", "div > div");
+        };
         element = createElement("main");
         element.innerHTML = [
             "<div test=\"test\">"
@@ -16,7 +20,7 @@ function testDeleteAttribute1(arrange, act, assert, module) {
     });
 
     act(function () {
-        deleteAttribute(element, "div > div", "test");
+        target.click();
     });
 
     assert(function (test) {
@@ -30,63 +34,25 @@ function testDeleteAttribute1(arrange, act, assert, module) {
         .hasAttribute("test")
         .isFalse();
 
-        test("the div element's 1st child should not have a 'test' attribute")
-        .value(element, "children[0].children[1]")
-        .hasAttribute("test")
-        .isFalse();
-
-    });
-}
-
-/**[@test({ "title": "TruJS.simpleViewSystem.simpleMethods._DeleteAttribute: root" })]*/
-function testDeleteAttribute2(arrange, act, assert, module) {
-    var deleteAttribute, createElement;
-
-    arrange(function () {
-        createElement = module([".createElement"]);
-        deleteAttribute = module(["TruJS.simpleViewSystem.simpleMethods._DeleteAttribute", []]);
-        element = createElement("main");
-        element.setAttribute("test", "test");
-        element.innerHTML = [
-            "<div>"
-            , "<div></div>"
-            , "<div test=\"test\"></div>"
-            , "</div>"
-        ]
-        .join("\n");
-    });
-
-    act(function () {
-        deleteAttribute(element, "test");
-    });
-
-    assert(function (test) {
-        test("the element should have a 'test' attribute")
-        .value(element)
-        .hasAttribute("test")
-        .isFalse();
-
-        test("the div element's 1st child should not have a 'test' attribute")
-        .value(element, "children[0].children[0]")
-        .hasAttribute("test")
-        .isFalse();
-
         test("the div element's 2nd child should not have a 'test' attribute")
         .value(element, "children[0].children[1]")
         .hasAttribute("test")
-        .isTrue();
+        .isFalse();
 
     });
 }
 
-/**[@test({ "title": "TruJS.simpleViewSystem.simpleMethods._DeleteAttribute: with event" })]*/
-function testDeleteAttribute3(arrange, act, assert, module) {
-    var deleteAttribute, createElement, event;
+/**[@test({ "title": "TruJS.simpleViewSystem.simpleMethods._DeleteAttribute: target" })]*/
+function testDeleteAttribute2(arrange, act, assert, module) {
+    var deleteAttribute, createElement, target, element;
 
     arrange(function () {
-        event = new Event('test');
         createElement = module([".createElement"]);
         deleteAttribute = module(["TruJS.simpleViewSystem.simpleMethods._DeleteAttribute", []]);
+        target = createElement("main");
+        target.onclick = function (e) {
+            deleteAttribute(e, element, "test");
+        };
         element = createElement("main");
         element.setAttribute("test", "test");
         element.innerHTML = [
@@ -99,12 +65,12 @@ function testDeleteAttribute3(arrange, act, assert, module) {
     });
 
     act(function () {
-        deleteAttribute(element, "test", event);
+        target.click();
     });
 
     assert(function (test) {
         test("the element should have a 'test' attribute")
-        .value(element)
+        .value(target)
         .hasAttribute("test")
         .isFalse();
 

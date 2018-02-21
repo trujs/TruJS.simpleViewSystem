@@ -2,26 +2,22 @@
 *
 * @factory
 */
-function _DeleteAttribute() {
+function _DeleteAttribute(attributeHelper) {
 
     /**
     * @worker
     */
-    return function DeleteAttribute(root, selector, attributeName, event) {
-        var elements = [root];
-        if (isNill(event)) {
-            if (isEvent(attributeName) || isNill(attributeName)) {
-                event = attributeName;
-                attributeName = selector;
-                selector = null;
-            }
-        }
+    return function DeleteAttribute(event, root, attributeName, selector) {
+        var elements;
         if (!!selector) {
             elements = root.querySelectorAll(selector);
         }
+        else {
+            elements = [event.target];
+        }
         if (!isEmpty(elements)) {
             elements.forEach(function forEachEl(el) {
-                el.removeAttribute(attributeName);
+                attributeHelper.remove(el, attributeName);
             });
         }
     };
