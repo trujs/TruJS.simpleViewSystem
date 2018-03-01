@@ -149,7 +149,13 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 simpleMixin(element, context);
                 //this is a work around for the proper option to be selected
                 if (element.tagName === "SELECT") {
-                    element.innerHTML = element.innerHTML;
+                    let selectedOption = element.querySelector("[selected]");
+                    if (!!selectedOption) {
+                        element.value = selectedOption.value;
+                    }
+                    else {
+                        element.value = "";
+                    }
                 }
             }
         }

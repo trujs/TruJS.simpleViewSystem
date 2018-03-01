@@ -25,8 +25,8 @@
 * @factory
 */
 function _SimpleExpression(arrayFromArguments) {
-    var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
-    , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? in ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
+    var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|in|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
+    , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
     , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
     , BIND_FUNC_PATT = /^\(([^)]+)\) ?=> ?([A-Za-z0-9$.,()'\[\]_]+)$/
@@ -68,10 +68,12 @@ function _SimpleExpression(arrayFromArguments) {
             , "key": keyVar
             , "val": valVar
         }
-        , res = evaluateValue(match[4], data)
-        , coll = filterCollection(res.result, match[7], vars, data)
-        , sort = match[5]
-        , dir = match[6] || "asc"
+        , op = match[4]
+        , res = evaluateValue(match[5], data)
+        , set = op === "in" && res.result || (new Array(res.result)).fill("")
+        , coll = filterCollection(set, match[7], vars, data)
+        , sort = match[6]
+        , dir = match[7] || "asc"
         , keys = Object.keys(coll)
         , indx = 0
         , expr = {
@@ -212,6 +214,9 @@ function _SimpleExpression(arrayFromArguments) {
                 break;
             case "<=":
                 expr.result = sideA <= sideB;
+                break;
+            case "in":
+                expr.result = sideB.indexOf(sideA) !== -1;
                 break;
             default:
                 expr.result = sideA === sideB;
