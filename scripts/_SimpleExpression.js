@@ -25,7 +25,7 @@
 * @factory
 */
 function _SimpleExpression(arrayFromArguments) {
-    var COND_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) (is|in|==|>|<|!=|>=|<=|!==|===) ([A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
+    var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
     , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
     , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
@@ -70,8 +70,8 @@ function _SimpleExpression(arrayFromArguments) {
         }
         , op = match[4]
         , res = evaluateValue(match[5], data)
-        , set = op === "in" && res.result || (new Array(res.result)).fill("")
-        , coll = filterCollection(set, match[7], vars, data)
+        , set = op === "in" && res.result || (new Array(parseInt(res.result || 0))).fill("")
+        , coll = filterCollection(set, match[8], vars, data)
         , sort = match[6]
         , dir = match[7] || "asc"
         , keys = Object.keys(coll)
@@ -215,8 +215,11 @@ function _SimpleExpression(arrayFromArguments) {
             case "<=":
                 expr.result = sideA <= sideB;
                 break;
-            case "in":
+            case "isin":
                 expr.result = sideB.indexOf(sideA) !== -1;
+                break;
+            case "!isin":
+                expr.result = sideB.indexOf(sideA) === -1;
                 break;
             default:
                 expr.result = sideA === sideB;
@@ -333,7 +336,12 @@ function _SimpleExpression(arrayFromArguments) {
             var innerExpr = evaluate(value[key], data);
             expr.keys = expr.keys.concat(innerExpr.keys);
             if (!!innerExpr.result) {
-                expr.result+= key;
+                if (!expr.result) {
+                    expr.result = key;
+                }
+                else {
+                    expr.result+= key;
+                }
             }
         });
 
