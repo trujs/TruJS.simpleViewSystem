@@ -549,20 +549,23 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         //if there is a prototype on the options and it's not a watcher
         // then create a watcher with the prototype object
         if (!isNill(options.prototype) && !isWatcher(options.prototype)) {
-            //
+            //get the current prototype
             var proto = options.prototype;
             //remove the prototype from the options
             delete options.prototype;
-            //pick the prototypes prototype
-            if (!!curProto) {
-                proto[cnsts.prototype] = curProto;
+            //pick the prototype's prototype
+            if (!!curProto && curProto !== options.prototype) {
+                Object.setPrototypeOf(proto, curProto);
             }
+            //native Array prototype
             else if (isArray(obj)) {
                 proto[cnsts.prototype] = selfAr;
             }
+            //native Function prototype
             else if (isFunc(obj)) {
                 proto[cnsts.prototype] = selfFn;
             }
+            //
             else {
                 proto[cnsts.prototype] = self;
             }
