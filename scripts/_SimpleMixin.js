@@ -18,6 +18,7 @@ function _SimpleMixin($container, findWatcher) {
 
         for (var i = 0, l = element.attributes.length; i < l; i++) {
             var attr = element.attributes[i];
+            if (!!attr.value && attr.value !== "false")
             attributes[attr.name] = attr[cnsts.value] || attr.value;
         }
 
