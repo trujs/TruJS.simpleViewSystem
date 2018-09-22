@@ -33,7 +33,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     */
     function convertHtml(tag, template, context) {
         //convert the tag to an element if it is not
-        if (!isElement(tag)) {
+        if (isString(tag)) {
             tag = createElement(tag || "div");
         }
         //add the inner html to the tag
@@ -149,7 +149,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 simpleMixin(element, context);
                 //this is a work around for the proper option to be selected
                 if (element.tagName === "SELECT") {
-                    let selectedOption = element.querySelector("[selected]");
+                    var selectedOption = element.querySelector("[selected]");
                     if (!!selectedOption) {
                         element.value = selectedOption.value;
                     }
@@ -367,7 +367,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             if (!result.hybrid && result.values.length === 1) {
                 value = result.values[0];
             }
-            if (isObject(value) || isFunc(value)) {
+            if (isObject(value) || isFunc(value) || isArray(value)) {
                 element.getAttributeNode(attr.name)[cnsts.value] = value;
                 element.setAttribute(name, "$value");
             }
