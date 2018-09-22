@@ -207,6 +207,9 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
                     renderedCb(new Error(simpleErrors.missingChildState.replace("{name}", id)));
                     return false;
                 }
+                //replace dots with underscores
+                element.id = id = id.replace(/[.]/g, "-");
+                //create the view
                 views.push(
                     simpleView(element, controller, childState, renderCb)
                 );
