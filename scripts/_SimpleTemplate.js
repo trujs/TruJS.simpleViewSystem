@@ -477,7 +477,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         keys.forEach(function forEachKey(key) {
             var obj = resolvePath(key, context)
             , guids
-            , watcher = findWatcher(obj.parent, obj.index);
+            , watcher = obj.found && findWatcher(obj.parent, obj.index);
             if (!!watcher) {
                 watchers.push({
                     "key": obj.index
