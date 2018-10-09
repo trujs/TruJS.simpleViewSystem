@@ -5,6 +5,7 @@
 */
 function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, funcAsync, newGuid, funcInspector, simpleReporter) {
     var LD_PATH = /[_]/g
+    , TAG_PATT = /\{([^}]+)\}/g
     , simpleView
     , cnsts = {
         "destroy": "$destroy"
@@ -12,6 +13,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         , "unwatch": "$unwatch"
         , "value": "$value"
         , "content": "$content"
+        , "tagTemplate": "<{name} id=\"{id}\"{attributes}></{name}>"
     }
     ;
 
@@ -403,6 +405,77 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
 
         return attributes;
     }
+    /**
+    * Creates the addChildView closure, which when called, adds a child view to
+    * the view, either at the selector or, appended to the views.element.
+    * @function
+    * @param {string} tag
+    * @param {object} state The object that will be used as the view's state.
+    * @param {string} [selector] The selector used to locate the parent element
+    * that the child view's element will be added to.
+    * @param {number} [position] The position in the parent element that the
+    * child view's element will be inserted; if omitted it will be appended.
+    */
+    function createAddChildViewClosure(view) {
+        return function addChildView(id, name, attributes, selector, position) {
+            var parent = view.element
+            , tagHtml = createViewHtml(name, id, attributes)
+            , tempEl, element
+            , childState = getChildState(id || name, view.state)
+            ;
+
+            //if there is a selector use it to get the parent element
+            if (!!selector) {
+                parent = parent.querySelector(selector);
+                if (!parent) {
+                    throw new Error(simpleErrors.invalidViewContainerSelector);
+                }
+            }
+
+            //run a temp element through the simple template to process the tagHTML
+            tempEl = simpleTemplate("temp", tagHtml, childState);
+            element = tempEl[0];
+
+            //add the element to the parent
+            if (isNill(position)) {
+                parent.appendChild(element);
+            }
+            else {
+                parent.insertBefore(element, parent.childNodes[position]);
+            }
+
+            //create the view the same way it would be created
+            view = processElements([element], view.state, view.renderCb)[0];
+
+            view.views.push(view);
+            view.children.push(element);
+        };
+    }
+    /**
+    * Creates an html tag with the supplied values
+    * @function
+    */
+    function createViewHtml(name, id, attributes) {
+        var context = {
+            "id": id
+            , "name": name
+            , "attributes": !!attributes &&
+                Object.keys(attributes)
+                .map(function mapAttribs(key) {
+                    return key + "=" + attributes[key];
+                })
+                .join(" ")
+        };
+
+        return cnsts.tagTemplate
+            .replace(TAG_PATT, function updateTags(tag, name) {
+                var val = context[name];
+                if (isNill(val)) {
+                    val = "";
+                }
+                return val;
+            });
+    }
 
     /**
     * @worker
@@ -425,6 +498,9 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
 
             //create the render function with the view token
             view.render = createRenderClosure(view);
+
+            //create the add child view function
+            view.addChildView = createAddChildViewClosure(view);
 
             //create the destroy closure
             view[cnsts.destroy] = createDestroyClosure(view);

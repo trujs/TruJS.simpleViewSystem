@@ -6,4 +6,5 @@
     , "missingChildState": "[MissingChildState] The child state '{name}' was not found in the views's context."
     , "missingProperty": "[MissingProperty] The property '{key}' does not exist in this object."
     , "destroyed": "[Destroyed] Unable to access the key {key}. The watcher has been destroyed an should no longer be used."
+    , "invalidViewContainerSelector": "[InvalidViewContainerSelector] The selector supplied, to find the containing element for the child view, did not return an element."
 }
