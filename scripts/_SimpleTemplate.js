@@ -561,7 +561,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         var element = convertHtml(tag, template);
 
         //if there is a self child tag then apply it's attributes to the tag
-        if (element.children[0].tagName === "SELF") {
+        if (!!element.children[0] && element.children[0].tagName === "SELF") {
             processSelfTag(element, data);
         }
 
