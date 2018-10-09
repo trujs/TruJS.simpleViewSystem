@@ -76,6 +76,7 @@ function _SimpleExpression(arrayFromArguments) {
         , dir = match[7] || "asc"
         , keys = Object.keys(coll)
         , indx = 0
+        , keyIndx = 0
         , expr = {
             "type": "iterator"
             , "keys": res.keys
@@ -122,14 +123,22 @@ function _SimpleExpression(arrayFromArguments) {
             }
             , "next": {
                 "value": function next() {
-                    if (indx < keys.length) {
-                        var key = keys[indx]
-                        , context = Object.create(data);
-                        context[vars.key] = key;
-                        !!vars.indx && (context[vars.indx] = indx);
-                        !!vars.val && (context[vars.val] = coll[key]);
-                        indx++;
-                        return context;
+                    if (keyIndx < keys.length) {
+                        var key, context;
+                        //skip over any filtered values
+                        while(coll[(key = keys[keyIndx])] === null && keyIndx < keys.length) {
+                            keyIndx++;
+                        }
+                        //if there is a next key then create the context obj
+                        if (!!key && coll[key] !== null) {
+                            context = Object.create(data);
+                            context[vars.key] = key;
+                            !!vars.indx && (context[vars.indx] = indx);
+                            !!vars.val && (context[vars.val] = coll[key]);
+                            indx++;
+                            keyIndx++;
+                            return context;
+                        }
                     }
                 }
             }
@@ -155,6 +164,9 @@ function _SimpleExpression(arrayFromArguments) {
                 if (evaluate(expr, context).result) {
                     isAr && filtered.push(coll[key]) ||
                         (filtered[key] = coll[key]);
+                }
+                else {
+                    filtered.push(null);
                 }
             });
 
