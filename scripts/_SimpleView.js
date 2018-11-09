@@ -462,7 +462,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             , "attributes": !!attributes &&
                 Object.keys(attributes)
                 .map(function mapAttribs(key) {
-                    return key + "=" + attributes[key];
+                    return key + "=\"" + attributes[key] + "\"";
                 })
                 .join(" ")
         };
