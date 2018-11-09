@@ -25,7 +25,7 @@
 * @factory
 */
 function _SimpleExpression(arrayFromArguments) {
-    var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
+    var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isnot|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
     , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
     , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
@@ -166,7 +166,7 @@ function _SimpleExpression(arrayFromArguments) {
                         (filtered[key] = coll[key]);
                 }
                 else {
-                    filtered.push(null);
+                    filtered[key] = null;
                 }
             });
 
@@ -199,9 +199,14 @@ function _SimpleExpression(arrayFromArguments) {
         }
 
         //if the operator equals "is" then we'll set sideA to getType
-        if (op === "is") {
+        if (op === "is" || op === "isnot") {
             sideA = getType(sideA);
-            op = "=";
+            if (op === "isnot") {
+                op = "!=";
+            }
+            else {
+                op = "==";
+            }
         }
 
         //run the evaluation ... I did it this way because using eval only works with primitives
@@ -228,10 +233,14 @@ function _SimpleExpression(arrayFromArguments) {
                 expr.result = sideA <= sideB;
                 break;
             case "isin":
-                expr.result = sideB.indexOf(sideA) !== -1;
+                expr.result = isArray(sideB) ?
+                    Array.prototype.indexOf.apply(sideB, [sideA]) !== -1 :
+                    false;
                 break;
             case "!isin":
-                expr.result = sideB.indexOf(sideA) === -1;
+            expr.result = isArray(sideB) ?
+                Array.prototype.indexOf.apply(sideB, [sideA]) === -1 : 
+                false;
                 break;
             default:
                 expr.result = sideA === sideB;
