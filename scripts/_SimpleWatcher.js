@@ -527,14 +527,17 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         //unsure we have an options object
         options = options || {};
         //store the current prototype
-        var curProto = options.prototype;
+        var curProto = options.prototype
+        , proto = obj[cnsts.prototype] !== undefined
+            ? obj[cnsts.prototype]
+            : options.prototype;
         //create a new options object using the current options and any reserved
         // value from the object
         options = {
             "freeze": obj.hasOwnProperty(cnsts.freeze) ? obj[cnsts.freeze] : options.freeze
             , "seal": obj.hasOwnProperty(cnsts.seal) ? obj[cnsts.seal] : options.seal
             , "extensible": obj.hasOwnProperty(cnsts.ext) ? obj[cnsts.ext] : options.extensible
-            , "prototype": obj[cnsts.prototype] || options.prototype
+            , "prototype": proto
             , "async": !!(obj.hasOwnProperty(cnsts.async) ? obj[cnsts.async] : options.async)
         };
         if (isNill(options.freeze)) {
