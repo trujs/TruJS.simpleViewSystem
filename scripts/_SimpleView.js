@@ -360,6 +360,8 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             destroyViews(view);
             //run the context destroy method
             destroyContext(view);
+            //remove the element
+            view.element.$destroy();
         };
     }
     /**
@@ -416,12 +418,13 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     * @param {number} [position] The position in the parent element that the
     * child view's element will be inserted; if omitted it will be appended.
     */
-    function createAddChildViewClosure(view) {
+    function createAddChildViewClosure(parentView) {
         return function addChildView(id, name, attributes, selector, position) {
-            var parent = view.element
-            , tagHtml = createViewHtml(name, id, attributes)
-            , tempEl, element
-            , childState = getChildState(id || name, view.state)
+            var parent = parentView.element
+            , tempEl, element, view
+            , childState = getChildState(id || name, parentView.state) || {}
+            , context = createChildViewContext(id, name, attributes, childState)
+            , tagHtml = createViewHtml(name, id, attributes, context)
             ;
 
             //if there is a selector use it to get the parent element
@@ -433,7 +436,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             }
 
             //run a temp element through the simple template to process the tagHTML
-            tempEl = simpleTemplate("temp", tagHtml, childState);
+            tempEl = simpleTemplate("temp", tagHtml, context);
             element = tempEl[0];
 
             //add the element to the parent
@@ -445,36 +448,67 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             }
 
             //create the view the same way it would be created
-            view = processElements([element], view.state, view.renderCb)[0];
+            view = processElements([element], parentView.state, parentView.renderCb)[0];
 
-            view.views.push(view);
-            view.children.push(element);
+            parentView.views.push(view);
+            parentView.children.push(element);
         };
     }
     /**
     * Creates an html tag with the supplied values
     * @function
     */
-    function createViewHtml(name, id, attributes) {
-        var context = {
-            "id": id
-            , "name": name
-            , "attributes": !!attributes &&
-                Object.keys(attributes)
-                .map(function mapAttribs(key) {
-                    return key + "=\"" + attributes[key] + "\"";
-                })
-                .join(" ")
-        };
+    function createViewHtml(name, id, attributes, context) {
+        var attrStr = "";
+
+        //add the attribute values to the context and update the attr string
+        if (isObject(attributes)) {
+            Object.keys(attributes)
+            .forEach(function forEachAttr(attrKey) {
+                var cntxtKey = attrKey.replace(/-/g, "");
+                attrStr+= " " +
+                    attrKey.toLowerCase() +
+                    "=\"{:" + cntxtKey + ":}\""
+                ;
+            });
+        }
 
         return cnsts.tagTemplate
             .replace(TAG_PATT, function updateTags(tag, name) {
-                var val = context[name];
-                if (isNill(val)) {
-                    val = "";
+                if (name === "attributes") {
+                    return attrStr;
                 }
-                return val;
+                else {
+                    var val = context[name];
+                    if (isNill(val)) {
+                        val = "";
+                    }
+                    return val;
+                }
+            })
+        ;
+    }
+    /**
+    * Creates the state-context object for the child view
+    * @function
+    */
+    function createChildViewContext(id, name, attributes, state) {
+        var context = Object.create(state);
+        context.id = id;
+        context.name = name;
+
+        //add the attribute values to the context and update the attr string
+        if (isObject(attributes)) {
+            Object.keys(attributes)
+            .forEach(function forEachAttr(attrKey) {
+                var cntxtKey = attrKey.replace(/-/g, "");
+                if (!context.hasOwnProperty(attrKey)) {
+                    context[cntxtKey] = attributes[attrKey];
+                }
             });
+        }
+
+        return context;
     }
 
     /**

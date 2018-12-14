@@ -526,6 +526,10 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             }
             //destroy the children
             destroyChildren(element);
+            //remove self
+            if (!!element.parentNode) {
+                element.parentNode.removeChild(element);
+            }
         };
     }
     /**
@@ -534,14 +538,15 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     */
     function destroyChildren(element) {
         //run the destroy on the children or decend
-        for (var i = 0, l = element.childNodes.length; i < l; i++) {
-            if (element.childNodes[i].hasOwnProperty(cnsts.destroy)) {
-                element.childNodes[i][cnsts.destroy]();
-            }
-            else {
-                destroyChildren(element.childNodes[i]);
-            }
-        }
+        element.childNodes
+            .forEach(function forEachChild(child) {
+                if (child.hasOwnProperty(cnsts.destroy)) {
+                    child[cnsts.destroy]();
+                }
+                else {
+                    destroyChildren(child);
+                }
+            });
     }
 
     /**
