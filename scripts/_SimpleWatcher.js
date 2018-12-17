@@ -176,6 +176,9 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         var destroy = function destroy() {
             //destroy all of the child watchers
             Object.keys(properties)
+            .filter(function filterKeys(key) {
+                return !properties[key].isProto;
+            })
             .forEach(function forEachKey(key) {
                 if (reserved.indexOf(key) === -1) {
                     var val = properties[key].get();
@@ -404,6 +407,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
             , "handlers": {}
             , "watcher": null
             , "key": key
+            , "isProto": !!options.prototype && key in options.prototype || false
         }
         , val = obj[key]
         ;
