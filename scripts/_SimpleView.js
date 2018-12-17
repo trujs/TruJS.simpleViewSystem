@@ -13,7 +13,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         , "unwatch": "$unwatch"
         , "value": "$value"
         , "content": "$content"
-        , "tagTemplate": "<{name} id=\"{id}\"{attributes}></{name}>"
+        , "tagTemplate": "<{tagName} id=\"{id}\"{attributes}></{tagName}>"
     }
     ;
 
@@ -495,7 +495,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     function createChildViewContext(id, name, attributes, state) {
         var context = Object.create(state);
         context.id = id;
-        context.name = name;
+        context.tagName = name;
 
         //add the attribute values to the context and update the attr string
         if (isObject(attributes)) {
