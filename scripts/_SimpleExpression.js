@@ -25,7 +25,7 @@
 * @factory
 */
 function _SimpleExpression(arrayFromArguments) {
-    var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isnot|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\])$/i
+    var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isnot|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\]|"[^"]+"|'[^']+')$/i
     , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
     , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
@@ -239,7 +239,7 @@ function _SimpleExpression(arrayFromArguments) {
                 break;
             case "!isin":
             expr.result = isArray(sideB) ?
-                Array.prototype.indexOf.apply(sideB, [sideA]) === -1 : 
+                Array.prototype.indexOf.apply(sideB, [sideA]) === -1 :
                 false;
                 break;
             default:
