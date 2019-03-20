@@ -439,6 +439,9 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             tempEl = simpleTemplate("temp", tagHtml, context);
             element = tempEl[0];
 
+            //create the view the same way it would be created
+            view = processElements([element], parentView.state, parentView.renderCb)[0];
+
             //add the element to the parent
             if (isNill(position)) {
                 parent.appendChild(element);
@@ -446,9 +449,6 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             else {
                 parent.insertBefore(element, parent.childNodes[position]);
             }
-
-            //create the view the same way it would be created
-            view = processElements([element], parentView.state, parentView.renderCb)[0];
 
             parentView.views.push(view);
             parentView.children.push(element);
