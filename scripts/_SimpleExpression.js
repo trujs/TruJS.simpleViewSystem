@@ -25,13 +25,13 @@
 * @factory
 */
 function _SimpleExpression(arrayFromArguments) {
-    var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isnot|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_]+|\[[a-z]+\]|"[^"]+"|'[^']+'|`[^`]+`)$/i
+    var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isnot|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_\ "`]+|\[[a-z]+\]|"[^"]+"|'[^']+'|`[^`]+`)$/i
     , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
     , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|`[^`]+`|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
     , FUNC_PATT = /^([A-Za-z0-9$.,()'\[\]_]+) ?\(([^)]+)?\)$/
     , BIND_FUNC_PATT = /^\(([^)]+)\) ?=> ?([A-Za-z0-9$.,()'\[\]_]+)$/
     , OBJ_PATT = /^\{.+\}$/
-    , ARRAY_PATT = /^\[([A-Za-z0-9$.()_'\[\],]+)\]$/
+    , ARRAY_PATT = /^\[([A-Za-z0-9$.()_'\[\], "`\-\.]+)\]$/
     , TYPE_PATT = /^\[([a-z]+)\]$/
     , INDX_PATT = /.*\]$/
     ;
