@@ -19,6 +19,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     , LN_END_PATT = /\r?\n/g
     , SPC_PATT = /[ ][ ]+/g
     , TAB_PATT = /\t/g
+    , INDXR_PATT = /\[\]/g
     , cnsts = {
         "value": "$value"
         , "destroy": "$destroy"
@@ -475,14 +476,25 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         var watchers = [];
 
         keys.forEach(function forEachKey(key) {
-            var obj = resolvePath(key, context)
-            , guids
-            , watcher = obj.found && findWatcher(obj.parent, obj.index);
+            var watcherKey;
+            if (INDXR_PATT.test(key)) {
+                //set the watcher key
+                watcherKey = key.replace(INDXR_PATT,"$every");
+                //change the key to before the first indexer
+                key = key.substring(0, key.indexOf("[]") - 1);
+            }
+            var ref = resolvePath(key, context)
+            , watcher = ref.found && findWatcher(ref.parent, ref.index);
+
+            if (!watcherKey) {
+                watcherKey = ref.index;
+            }
+
             if (!!watcher) {
                 watchers.push({
-                    "key": obj.index
+                    "key": watcherKey
                     , "parent": watcher
-                    , "guids": watcher[cnsts.watch](obj.index, handler)
+                    , "guids": watcher[cnsts.watch](watcherKey, handler)
                 });
             }
         });
