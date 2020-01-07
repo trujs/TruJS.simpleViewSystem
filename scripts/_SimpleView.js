@@ -419,16 +419,15 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     * child view's element will be inserted; if omitted it will be appended.
     */
     function createAddChildViewClosure(parentView) {
-        return function addChildView(id, name, attributes, selector, position) {
+        return function addChildView(id, tagName, attributes, selector, position) {
             var parent = parentView.element
             , tempEl, element, view
-            , childState = getChildState(id || name, parentView.state) || {}
-            , context = createChildViewContext(id, name, attributes, childState)
-            , tagHtml = createViewHtml(name, id, attributes, context)
+            , childState = getChildState(id || tagName, parentView.state)
+            , context = createChildViewContext(id, tagName, attributes, childState)
+            , tagHtml = createViewHtml(tagName, id, attributes, context)
             ;
-
             //if there is a selector use it to get the parent element
-            if (!!selector) {
+            if (isString(selector) && !isEmpty(selector)) {
                 parent = parent.querySelector(selector);
                 if (!parent) {
                     throw new Error(simpleErrors.invalidViewContainerSelector);
@@ -440,7 +439,11 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             element = tempEl[0];
 
             //create the view the same way it would be created
-            view = processElements([element], parentView.state, parentView.renderCb)[0];
+            view = processElements(
+                [element]
+                , parentView.state
+                , parentView.renderCb
+            )[0];
 
             //add the element to the parent
             if (isNill(position)) {
@@ -465,10 +468,11 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         if (isObject(attributes)) {
             Object.keys(attributes)
             .forEach(function forEachAttr(attrKey) {
-                var cntxtKey = attrKey.replace(/-/g, "");
+                var cntxtKey = attrKey.replace(/-/g, "")
+                , value = attributes[attrKey];
                 attrStr+= " " +
                     attrKey.toLowerCase() +
-                    "=\"{:" + cntxtKey + ":}\""
+                    "=\"" + value + "\""
                 ;
             });
         }
