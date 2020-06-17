@@ -419,12 +419,45 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     * child view's element will be inserted; if omitted it will be appended.
     */
     function createAddChildViewClosure(parentView) {
-        return function addChildView(id, tagName, attributes, selector, position) {
+        return function addChildView(
+            id
+            , tagName
+            , attributes
+            , selector
+            , position
+            , newState
+        ) {
+            var refId, ref;
+            //add the new state to the parent state
+            if (isObject(newState)) {
+                if (id.indexOf(".") !== -1 ) {
+                    refId = id.substring(0, id.lastIndexOf("."));
+                    ref = resolvePath(
+                        refId
+                        , parentView.state
+                    );
+                    ref.value[
+                        id.substring(id.lastIndexOf(".") + 1)
+                    ] = newState;
+                    ref.value.$process();
+                }
+                else {
+                    parentView.state[id] = newState;
+                    parentView.state.$process();
+                }
+            }
+
             var parent = parentView.element
             , tempEl, element, view
-            , childState = getChildState(id || tagName, parentView.state)
-            , context = createChildViewContext(id, tagName, attributes, childState)
-            , tagHtml = createViewHtml(tagName, id, attributes, context)
+            , childState = getChildState(
+                id
+                , parentView.state
+            )
+            , tagHtml = createViewHtml(
+                tagName
+                , id
+                , attributes
+            )
             ;
             //if there is a selector use it to get the parent element
             if (isString(selector) && !isEmpty(selector)) {
@@ -435,7 +468,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             }
 
             //run a temp element through the simple template to process the tagHTML
-            tempEl = simpleTemplate("temp", tagHtml, context);
+            tempEl = simpleTemplate("temp", tagHtml, parentView.context);
             element = tempEl[0];
 
             //create the view the same way it would be created
@@ -461,7 +494,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     * Creates an html tag with the supplied values
     * @function
     */
-    function createViewHtml(name, id, attributes, context) {
+    function createViewHtml(tagName, id, attributes) {
         var attrStr = "";
 
         //add the attribute values to the context and update the attr string
@@ -482,37 +515,14 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
                 if (name === "attributes") {
                     return attrStr;
                 }
-                else {
-                    var val = context[name];
-                    if (isNill(val)) {
-                        val = "";
-                    }
-                    return val;
+                else if (name === "id") {
+                    return id;
+                }
+                else if (name === "tagName") {
+                    return tagName;
                 }
             })
         ;
-    }
-    /**
-    * Creates the state-context object for the child view
-    * @function
-    */
-    function createChildViewContext(id, name, attributes, state) {
-        var context = Object.create(state);
-        context.id = id;
-        context.tagName = name;
-
-        //add the attribute values to the context and update the attr string
-        if (isObject(attributes)) {
-            Object.keys(attributes)
-            .forEach(function forEachAttr(attrKey) {
-                var cntxtKey = attrKey.replace(/-/g, "");
-                if (!context.hasOwnProperty(attrKey)) {
-                    context[cntxtKey] = attributes[attrKey];
-                }
-            });
-        }
-
-        return context;
     }
 
     /**
