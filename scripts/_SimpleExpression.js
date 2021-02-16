@@ -24,7 +24,13 @@
 *   x("param") -> function
 * @factory
 */
-function _SimpleExpression(arrayFromArguments) {
+function _SimpleExpression(
+    is_nill
+    , is_array
+    , is_object
+    , is_func
+    , utils_reference
+) {
     var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isnot|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_\ "`]+|\[[a-z]+\]|"[^"]+"|'[^']+'|`[^`]+`)$/i
     , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
     , LITERAL_PATT = /^(?:('[^']+'|"[^"]+"|`[^`]+`|(?:0x)?[0-9.]+)|true|false|null|undefined)$/
@@ -89,11 +95,11 @@ function _SimpleExpression(arrayFromArguments) {
                 var k1Val = sort === keyVar && k1
                     || sort === indxVar && keys.indexOf(k1)
                     || sort === valVar && coll[k1]
-                    || resolvePath(sort, coll[k1]).value
+                    || utils_reference(sort, coll[k1]).value
                 , k2Val = sort === keyVar && k2
                     || sort === indxVar && keys.indexOf(k2)
                     || sort === valVar && coll[k2]
-                    || resolvePath(sort, coll[k2]).value
+                    || utils_reference(sort, coll[k2]).value
                 ;
                 if (k1Val < k2Val) {
                     return dir === "asc" && -1 || 1;
@@ -124,17 +130,33 @@ function _SimpleExpression(arrayFromArguments) {
             , "next": {
                 "value": function next() {
                     if (keyIndx < keys.length) {
-                        var key, context;
+                        var key, context, properties = {};
                         //skip over any filtered values
                         while(coll[(key = keys[keyIndx])] === null && keyIndx < keys.length) {
                             keyIndx++;
                         }
                         //if there is a next key then create the context obj
                         if (!!key && coll[key] !== null) {
-                            context = Object.create(data);
-                            context[vars.key] = key;
-                            !!vars.indx && (context[vars.indx] = indx);
-                            !!vars.val && (context[vars.val] = coll[key]);
+                            properties[vars.key] = {
+                                "enumerable": true
+                                , "value": key
+                            };
+                            if (!!vars.indx) {
+                                properties[vars.indx] = {
+                                    "enumerable": true
+                                    , "value": indx
+                                };
+                            }
+                            if (!!vars.val) {
+                                properties[vars.val] = {
+                                    "enumerable": true
+                                    , "value": coll[key]
+                                };
+                            }
+                            context = Object.create(
+                                data
+                                , properties
+                            );
                             indx++;
                             keyIndx++;
                             return context;
@@ -153,14 +175,33 @@ function _SimpleExpression(arrayFromArguments) {
     function filterCollection(coll, expr, vars, data) {
         if (!!coll && !!expr) {
             var keys = Object.keys(coll)
-            , isAr = isArray(coll)
-            , filtered = isAr && [] || {};
+            , isAr = is_array(coll)
+            , filtered = isAr && [] || {}
+            , properties
+            ;
 
             keys.forEach(function forEachKey(key, indx) {
-                var context = Object.create(data);
-                context[vars.key] = key;
-                !!vars.indx && (context[vars.indx] = indx);
-                !!vars.val && (context[vars.val] = coll[key]);
+                properties[vars.key] = {
+                    "enumerable": true
+                    , "value": key
+                };
+                if (!!vars.indx) {
+                    properties[vars.indx] = {
+                        "enumerable": true
+                        , "value": indx
+                    };
+                }
+                if (!!vars.val) {
+                    properties[vars.val] = {
+                        "enumerable": true
+                        , "value": coll[key]
+                    };
+                }
+                var context = Object.create(
+                    data
+                    , properties
+                );
+
                 if (evaluate(expr, context).result) {
                     isAr && filtered.push(coll[key]) ||
                         (filtered[key] = coll[key]);
@@ -193,7 +234,7 @@ function _SimpleExpression(arrayFromArguments) {
         expr.keys = expr.keys.concat(sideA.keys);
         sideA = sideA.result;
         //add the side b keys
-        if (isObject(sideB)) {
+        if (is_object(sideB)) {
             expr.keys = expr.keys.concat(sideB.keys);
             sideB = sideB.result;
         }
@@ -233,12 +274,12 @@ function _SimpleExpression(arrayFromArguments) {
                 expr.result = sideA <= sideB;
                 break;
             case "isin":
-                expr.result = isArray(sideB) ?
+                expr.result = is_array(sideB) ?
                     Array.prototype.indexOf.apply(sideB, [sideA]) !== -1 :
                     false;
                 break;
             case "!isin":
-            expr.result = isArray(sideB) ?
+            expr.result = is_array(sideB) ?
                 Array.prototype.indexOf.apply(sideB, [sideA]) === -1 :
                 false;
                 break;
@@ -279,8 +320,8 @@ function _SimpleExpression(arrayFromArguments) {
     function evaluatefunc(match, data) {
         var funcName = match[1]
         , params = match[2]
-        , func = isFunc(funcName) && funcName
-            || resolvePath(funcName, data).value
+        , func = is_func(funcName) && funcName
+            || utils_reference(funcName, data).value
         , expr = {
             "type": "function"
             , "keys": []
@@ -305,7 +346,7 @@ function _SimpleExpression(arrayFromArguments) {
     * @function
     */
     function bindFunc(value, path, params, data) {
-        var func = resolvePath(path, data).value
+        var func = utils_reference(path, data).value
         , keysLoaded = false
         , expr = {
             "type": "function"
@@ -321,9 +362,10 @@ function _SimpleExpression(arrayFromArguments) {
         return expr;
 
         //the wrapped function
-        function wrapped() {
+        function wrapped(...args) {
             var params = parseParams()
-                .concat(arrayFromArguments(arguments));
+                .concat(args)
+            ;
             return func.apply(null, params);
         }
         //parses and resolvese the parameters
@@ -404,11 +446,13 @@ function _SimpleExpression(arrayFromArguments) {
             }
             else {
                 expr = value;
-                res = resolvePath(value, data);
+                res = utils_reference(value, data);
 
                 return {
                     "type": "value"
-                    , "keys": res.indexKeys.concat(res.path)
+                    , "keys": !is_nill(res.index)
+                        ? res.keys.concat(res.index)
+                        : []
                     , "expression": expr
                     , "result": res.value
                 };

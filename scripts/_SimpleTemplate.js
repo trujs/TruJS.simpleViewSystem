@@ -12,7 +12,21 @@
 * 4. returns the root element's children
 * @factory
 */
-function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, simpleMixin, simpleMethods, arrayFromArguments) {
+function _SimpleTemplate(
+    promise
+    , simpleExpression
+    , statenet_common_findStateful
+    , simpleMixin
+    , simpleMethods
+    , dom_createElement
+    , is_array
+    , is_object
+    , is_empty
+    , is_func
+    , is_nill
+    , is_string
+    , utils_reference
+) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^[ \t\n\r]+$/
     , TRIM_PATT = /^[\n\r\t ]+(.*?)[\n\r\t ]+$/
@@ -23,9 +37,17 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     , cnsts = {
         "value": "$value"
         , "destroy": "$destroy"
-        , "watch": "$watch"
-        , "unwatch": "$unwatch"
+        , "watch": "$addListener"
+        , "unwatch": "$removeListener"
     }
+    /**
+    * @alias
+    */
+    , createElement = dom_createElement
+    /**
+    * @alias
+    */
+    , findStateful = statenet_common_findStateful
     ;
 
     /**
@@ -34,7 +56,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     */
     function convertHtml(tag, template, context) {
         //convert the tag to an element if it is not
-        if (isString(tag)) {
+        if (!tag || is_string(tag)) {
             tag = createElement(tag || "div");
         }
         //add the inner html to the tag
@@ -88,21 +110,28 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * @function
     */
     function createContext(element, data) {
-        var context = Object.create(data);
+        var properties = {};
 
         Object.keys(simpleMethods)
-        .forEach(function (key) {
-            context[key] = runMethod.bind(null, element);
-            function runMethod() {
-                var args = arrayFromArguments(arguments);
-                simpleMethods[key].apply(null, args);
+        .forEach(
+            function (key) {
+                properties[key] = {
+                    "enumberable": true
+                    , "value": simpleMethods[key].bind(null, element)
+                };
             }
-        });
+        );
 
         //set the element on the context
-        context["$element"] = element;
+        properties["$element"] = {
+            "enumerable": true
+            , "value": element
+        };
 
-        return context;
+        return Object.create(
+            data
+            , properties
+        );
     }
     /**
     * Processes the element including special tags, if and repeat, and
@@ -288,12 +317,12 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         //reference to the parent element
         , parent = textNode.parentNode
         //create/get an el tag to hold the text
-        , el = isEmpty(value) && null
+        , el = is_empty(value) && null
             || parent.childNodes.length === 1 && parent
             || createElement('span')
         ;
 
-        if (!isEmpty(value)) {
+        if (!is_empty(value)) {
             //replace the text node with the el
             if (el !== parent) {
                 el.watchers = [];
@@ -368,11 +397,11 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             if (!result.hybrid && result.values.length === 1) {
                 value = result.values[0];
             }
-            if (isObject(value) || isFunc(value) || isArray(value)) {
+            if (is_object(value) || is_func(value) || is_array(value)) {
                 element.getAttributeNode(attr.name)[cnsts.value] = value;
                 element.setAttribute(name, "$value");
             }
-            else if (!isNill(value)) {
+            else if (!is_nill(value)) {
                 element.setAttribute(name, value);
             }
             else {
@@ -399,7 +428,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             func = simpleExpression(expr[1], context).result;
         }
         //if func is a function then create the handler
-        if (isFunc(func)) {
+        if (is_func(func)) {
             element.addEventListener(name, func);
         }
     }
@@ -415,7 +444,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         , nodes;
         //make sure this evalutated to an iterator
         if (!!iter.next) {
-            while(!isNill(repeatContext = iter.next())) {
+            while(!is_nill(repeatContext = iter.next())) {
                 element.innerHTML = template;
                 nodes = processChildren(element, repeatContext);
                 insertNodes(beforeEl, nodes);
@@ -454,7 +483,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
             var expr = simpleExpression(expr, context);
             result.keys = result.keys.concat(expr.keys);
             result.values.push(expr.result);
-            if (isObject(expr.result) || isFunc(expr.result)) {
+            if (is_object(expr.result) || is_func(expr.result)) {
                 return "";
             }
             return expr.result;
@@ -483,8 +512,13 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 //change the key to before the first indexer
                 key = key.substring(0, key.indexOf("[]") - 1);
             }
-            var ref = resolvePath(key, context)
-            , watcher = ref.found && findWatcher(ref.parent, ref.index);
+            var ref = utils_reference(
+                key
+                , context
+            )
+            , watcher = ref.found
+                && findStateful(ref.parent, ref.index)
+            ;
 
             if (!watcherKey) {
                 watcherKey = ref.index;
@@ -494,7 +528,16 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
                 watchers.push({
                     "key": watcherKey
                     , "parent": watcher
-                    , "guids": watcher[cnsts.watch](watcherKey, handler)
+                    , "guids": watcher[cnsts.watch](
+                        watcherKey
+                        , function stateNetWrap(event, key) {
+                            handler(
+                                key
+                                , event.value
+                                , event
+                            );
+                        }
+                    )
                 });
             }
         });
@@ -531,7 +574,7 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
         delete element.watchers;
         element[cnsts.destroy] = function destroy() {
             //destroy the elements watchers
-            if (isArray(watchers)) {
+            if (is_array(watchers)) {
                 watchers.forEach(function (watcher) {
                     watcher.parent[cnsts.unwatch](watcher.guids);
                 });
@@ -565,13 +608,13 @@ function _SimpleTemplate(promise, createElement, simpleExpression, findWatcher, 
     * @worker
     */
     return function SimpleTemplate(tag, template, data) {
-        if (isNill(data) && isString(tag)) {
+        if (is_nill(data) && is_string(tag)) {
             data = template;
             template = tag;
             tag = null;
         }
         //template could be an array
-        if(isArray(template)) {
+        if(is_array(template)) {
             template = template.join("\n");
         }
 

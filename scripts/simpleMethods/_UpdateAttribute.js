@@ -2,7 +2,7 @@
 *
 * @factory
 */
-function _UpdateAttribute() {
+function _UpdateAttribute(is_event, is_object, is_nill, is_empty) {
 
     /**
     * @worker
@@ -10,23 +10,23 @@ function _UpdateAttribute() {
     return function UpdateAttribute(root, selector, attributes, attributeValue, event) {
         var elements = [root];
 
-        if (isEvent(attributeValue)) {
+        if (is_event(attributeValue)) {
             event = attributeValue
-            if (!isObject(attributes)) {
+            if (!is_object(attributes)) {
                 attributeValue = attributes;
                 attributes = selector;
                 selector = null;
             }
         }
-        if (isNill(attributeValue)) {
-            if (!isObject(attributes)) {
+        if (is_nill(attributeValue)) {
+            if (!is_object(attributes)) {
                 attributeValue = attributes;
                 attributes = selector;
                 selector = null;
             }
         }
-        if (isObject(selector)) {
-            if (isEvent(attributes)) {
+        if (is_object(selector)) {
+            if (is_event(attributes)) {
                 event = attributes;
             }
             attributes = selector;
@@ -35,9 +35,9 @@ function _UpdateAttribute() {
         if (!!selector) {
             elements = root.querySelectorAll(selector);
         }
-        if (!isEmpty(elements)) {
+        if (!is_empty(elements)) {
             elements.forEach(function forEachEl(el) {
-                if (isObject(attributes)) {
+                if (is_object(attributes)) {
                     Object.keys(attributes)
                     .forEach(function forEachAttr(key) {
                         el.setAttribute(key, attributes[key]);

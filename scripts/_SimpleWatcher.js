@@ -18,8 +18,18 @@
 *
 * @factory
 */
-function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
-    var self = {}, selfAr = [], selfFn = emFn
+function _SimpleWatcher(
+    simpleErrors
+    , reporter
+    , is_array
+    , is_object
+    , is_func
+    , is_nill
+    , utils_reference
+    , utils_uuid
+    , utils_func_async
+) {
+    var self = {}, selfAr = [], selfFn = function(){}
     , cnsts = {
         "nowatch": "__nowatch"
         , "freeze": "__freeze"
@@ -67,12 +77,12 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
             properties[cnsts.process].value();
 
             //update the paths to an array
-            if(!isArray(paths)) {
+            if(!is_array(paths)) {
                 //using the $all path to lookup all properties plus all children
                 if (paths.indexOf(cnsts.all) === 0) {
                     paths = Object.keys(obj)
                     .map(function (key) {
-                        return key + ((isObject(obj[key]) || isArray(obj[key]))  && ("." + cnsts.all) || "");
+                        return key + ((is_object(obj[key]) || is_array(obj[key]))  && ("." + cnsts.all) || "");
                     });
                 }
                 //using the $every path to lookup all local properties
@@ -150,7 +160,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
             if (guids === "all") {
                 guids = getAllGuids(properties);
             }
-            if(!isArray(guids)) {
+            if(!is_array(guids)) {
                 guids = [guids];
             }
             guids.forEach(function forEachPath(guid) {
@@ -236,7 +246,9 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
     */
     function addHandler(property, handler) {
         var handlers = property.handlers
-        , guid = newGuid();
+        , guid = utils_uuid(
+            {"version":4}
+        );
 
         handlers[guid] = handler;
 
@@ -258,7 +270,10 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         // add the handler to
         childHandlers.forEach(function forEachChild(childHandler) {
             //see if the child path exists
-            var ref = resolvePath(childHandler.childPath, watcher);
+            var ref = utils_reference(
+                childHandler.childPath
+                , watcher
+            );
             //if the parent is a watcher then add the handler
             if (isWatcher(ref.parent)) {
                 addChildHandler(
@@ -308,7 +323,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         //get the handlers
         Object.keys(property.handlers)
         .forEach(function forEachGuid(guid) {
-            if (!isFunc(property.handlers[guid])) {
+            if (!is_func(property.handlers[guid])) {
                 guids.push(guid);
                 childHandlers.push(property.handlers[guid]);
             }
@@ -342,7 +357,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
                 var handlers = properties[key].handlers;
                 if (handlers.hasOwnProperty(guid)) {
                     //if the handler is an object then it's the child watcher
-                    if (!isFunc(handlers[guid])) {
+                    if (!is_func(handlers[guid])) {
                         removeChildHandler(properties[key], handlers[guid]);
                     }
                     delete handlers[guid];
@@ -362,13 +377,15 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         //loop through the handlers, creating an array
         // this is needed because firing one handler might destroy the next
         Object.keys(handlers).forEach(function forEachHandler(handlerKey) {
-            if (isFunc(handlers[handlerKey])) {
+            if (is_func(handlers[handlerKey])) {
                 handlerList.push(handlers[handlerKey]);
             }
         });
 
         if (options.async) {
-            funcAsync(executeHandlers);
+            utils_func_async(
+                executeHandlers
+            );
         }
         else {
             executeHandlers();
@@ -382,7 +399,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
                     handler.apply(null, [key, value]);
                 }
                 catch(ex) {
-                    simpleReporter.error(ex);
+                    reporter.error(ex);
                 }
             });
         }
@@ -412,7 +429,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         , val = obj[key]
         ;
         //if the property is a function then wrap it
-        if (isFunc(val)) {
+        if (is_func(val)) {
             val = wrapFunction(property, val, options);
         }
         //process the value
@@ -471,7 +488,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
     * @function
     */
     function processValue(value, options) {
-        if (!isObject(value) && !isArray(value) && !isFunc(value)) {
+        if (!is_object(value) && !is_array(value) && !is_func(value)) {
             return;
         }
         if (value.hasOwnProperty(cnsts.nowatch)) {
@@ -544,18 +561,18 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
             , "prototype": proto
             , "async": !!(obj.hasOwnProperty(cnsts.async) ? obj[cnsts.async] : options.async)
         };
-        if (isNill(options.freeze)) {
+        if (is_nill(options.freeze)) {
             options.freeze = true;
         }
-        if (isNill(options.seal)) {
+        if (is_nill(options.seal)) {
             options.seal = false;
         }
-        if (isNill(options.extensible)) {
+        if (is_nill(options.extensible)) {
             options.extensible = true;
         }
         //if there is a prototype on the options and it's not a watcher
         // then create a watcher with the prototype object
-        if (!isNill(options.prototype) && !isWatcher(options.prototype)) {
+        if (!is_nill(options.prototype) && !isWatcher(options.prototype)) {
             //get the current prototype
             var proto = options.prototype;
             //remove the prototype from the options
@@ -565,11 +582,11 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
                 Object.setPrototypeOf(proto, curProto);
             }
             //native Array prototype
-            else if (isArray(obj)) {
+            else if (is_array(obj)) {
                 proto[cnsts.prototype] = selfAr;
             }
             //native Function prototype
-            else if (isFunc(obj)) {
+            else if (is_func(obj)) {
                 proto[cnsts.prototype] = selfFn;
             }
             //
@@ -595,7 +612,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
     * @static
     */
     function isWatcher(obj) {
-        return isObject(obj) && Object.getPrototypeOf(obj) === self || obj === self || obj === selfAr || obj === selfFn || false;
+        return is_object(obj) && Object.getPrototypeOf(obj) === self || obj === self || obj === selfAr || obj === selfFn || false;
     }
     /**
     * Looks through the prototype chain to find the true watcher object and then
@@ -631,10 +648,10 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         , proto = self
         ;
 
-        if (isArray(obj)) {
+        if (is_array(obj)) {
             proto = selfAr;
         }
-        else if (isFunc(obj)) {
+        else if (is_func(obj)) {
             proto = selfFn;
         }
 
@@ -655,10 +672,10 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         }
 
         //create the watcher
-        if (isArray(obj)) {
+        if (is_array(obj)) {
             watched = [];
         }
-        else if (isFunc(obj)) {
+        else if (is_func(obj)) {
             watched = function () {
                 return obj.apply(watched, arguments);
             };

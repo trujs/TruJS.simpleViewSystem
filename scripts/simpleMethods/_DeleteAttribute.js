@@ -2,15 +2,15 @@
 *
 * @factory
 */
-function _DeleteAttribute() {
+function _DeleteAttribute(is_nill, is_empty, is_event) {
 
     /**
     * @worker
     */
     return function DeleteAttribute(root, selector, attributeName, event) {
         var elements = [root];
-        if (isNill(event)) {
-            if (isEvent(attributeName) || isNill(attributeName)) {
+        if (is_nill(event)) {
+            if (is_event(attributeName) || is_nill(attributeName)) {
                 event = attributeName;
                 attributeName = selector;
                 selector = null;
@@ -19,7 +19,7 @@ function _DeleteAttribute() {
         if (!!selector) {
             elements = root.querySelectorAll(selector);
         }
-        if (!isEmpty(elements)) {
+        if (!is_empty(elements)) {
             elements.forEach(function forEachEl(el) {
                 el.removeAttribute(attributeName);
             });

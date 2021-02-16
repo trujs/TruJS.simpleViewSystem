@@ -3,18 +3,41 @@
 * calls the controller
 * @factory
 */
-function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, funcAsync, newGuid, funcInspector, simpleReporter) {
+function _SimpleView(
+    promise
+    , $resolve
+    , simpleTemplate
+    , simpleErrors
+    , simpleStyle
+    , reporter
+    , is_array
+    , is_object
+    , is_empty
+    , is_func
+    , is_nill
+    , is_string
+    , utils_func_async
+    , utils_reference
+    , utils_lookup
+    , utils_func_inspector
+    , utils_uuid
+) {
     var LD_PATH = /[_]/g
     , TAG_PATT = /\{([^}]+)\}/g
     , simpleView
     , cnsts = {
         "destroy": "$destroy"
-        , "watch": "$watch"
-        , "unwatch": "$unwatch"
+        , "watch": "$addListener"
+        , "unwatch": "$removeListener"
         , "value": "$value"
         , "content": "$content"
         , "tagTemplate": "<{tagName} id=\"{id}\"{attributes}></{tagName}>"
     }
+    /**
+    * A list of tag names that have already been checked for a controller and don't have one
+    * @property
+    */
+    , noControllers = []
     ;
 
     /**
@@ -41,7 +64,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             }
             , "$tagId": {
                 "enumerable": true
-                , "value": !!view.element.id && view.element.id || (view.element.id = newGuid(true))
+                , "value": !!view.element.id && view.element.id || (view.element.id = utils_uuid({"version":4,"format":"id"}))
             }
             , "$tagClass": {
                 "enumerable": true
@@ -80,7 +103,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
                 processTemplates(view);
 
                 //if we have elements then process them
-                if (!isEmpty(view.children)) {
+                if (!is_empty(view.children)) {
                     appendElements(view);
                     view.views = processElements(
                         view.children
@@ -91,7 +114,10 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
 
                 //if there is a $render function on the context then fire it
                 if (view.context.hasOwnProperty("$render")) {
-                    funcAsync(view.context["$render"], [view]);
+                    utils_func_async(
+                        view.context["$render"]
+                        , [view]
+                    );
                 }
 
                 //if there isn't an html template then we'll need to fire the
@@ -136,7 +162,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         //if a template was passed then use it
         if (!!template) {
             //if template is an array then it's html + css
-            if (isArray(template)) {
+            if (is_array(template)) {
                 view.cssTemplate = template[1];
                 view.htmlTemplate = template[0];
             }
@@ -146,10 +172,10 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         }
 
         //convert the css and html template arrays
-        if (isArray(view.cssTemplate)) {
+        if (is_array(view.cssTemplate)) {
             view.cssTemplate = view.cssTemplate.join("\n\n");
         }
-        if (isArray(view.htmlTemplate)) {
+        if (is_array(view.htmlTemplate)) {
             view.htmlTemplate = view.htmlTemplate.join("\n\n");
         }
     }
@@ -179,59 +205,54 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     * @function
     */
     function processElements(elements, state, renderedCb) {
-        var error, renderCnt = elements.length, views = [];
+        var error, renderCnt = elements.length, views = []
+        , proc = promise.resolve()
+        ;
 
         //loop through the elements until finished or an error occurs
-        elements.every(function forEachElement(element) {
-            //if this is a text node, skip all of this
-            if (element.nodeType !== 1) {
-                renderCb();
-                return true;
-            }
-
-            //process the element
-            var name = getElementName(element)
-            , id = element.id || generateId(name)
-            , isStateless = element.hasAttribute("stateless")
-            , ctrlName = ".controllers." + name.replace(/-/g, ".")
-            , controller = getController(ctrlName)
-            , childState = getChildState(id, state)
-            ;
-
-            //if there is a controller then run the view
-            if (!!controller) {
-                //see if the controller is stateless
-                if (!isStateless) {
-                    isStateless = funcInspector(controller).params.length < 3;
+        elements.forEach(
+            function forEachElement(element) {
+                //if this is a text node, skip all of this
+                if (element.nodeType !== 1) {
+                    renderCb();
+                    return;
                 }
-                //if this is not stateless and we are missing a state, throw an error
-                if (!childState && !isStateless) {
-                    renderedCb(new Error(simpleErrors.missingChildState.replace("{name}", id)));
-                    return false;
-                }
-                //replace dots with underscores
-                element.id = id = id.replace(/[.]/g, "-");
-                //create the view
-                views.push(
-                    simpleView(element, controller, childState, renderCb)
+                //process the element
+                var name = getElementName(element)
+                , ctrlName = name.replace(/-/g, ".")
+                ;
+                //get controller is now asyncronous
+                proc = proc.then(
+                    function thengetNextController() {
+                        return getController(
+                            ctrlName
+                        );
+                    }
+                )
+                .catch(
+                    function catchGetControllerError(err) {
+                        return promise.resolve();
+                    }
+                )
+                .then(
+                    function thenProcessElement(result) {
+                        var controller;
+                        if (!!result) {
+                            controller = result.value;
+                        }
+                        processElement(
+                            views
+                            , name
+                            , state
+                            , element
+                            , controller
+                            , renderCb
+                        );
+                        return promise.resolve();
+                    }
                 );
             }
-            //otherwise process the children, or execute the render callback
-            else {
-                //if there are children then process those
-                if (element.childNodes.length > 0) {
-                    var children = Array.prototype.slice.apply(element.childNodes);
-                    views = views.concat(
-                        processElements(children, state, renderCb)
-                    );
-                }
-                else {
-                    renderCb();
-                }
-            }
-            //continue the loop
-            return true;
-        });
+        );
 
         //render callback aggrigator
         function renderCb(err) {
@@ -266,20 +287,120 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     * @function
     */
     function getController(name) {
-        var ctrl;
-        if ($container.hasDependency(name.substring(1))) {
-            ctrl =  $container(name);
-            //make sure we didn't find an object dependency
-            if (isFunc(ctrl)) {
-                return ctrl;
+        //if this name is in the no controllers list, skip it
+        if (noControllers.indexOf(name) !== -1) {
+            return promise.resolve(null);
+        }
+        //try without view on the end
+        return $resolve(
+            [
+               `.controllers.${name}`
+               , {"missingAction":"none"}
+            ]
+        )
+        .then(
+            function thenCheckResolved(controller) {
+                if (!!controller && is_func(controller.value)) {
+                    return promise.resolve(controller);
+                }
+                //try with view on the end
+                return $resolve(
+                    [
+                        `.controllers.${name}.view`
+                        , {"missingAction":"none"}
+                    ]
+                );
+            }
+        )
+        .then(
+            function thenFinalResolveCheck(controller) {
+                if (!!controller && is_func(controller.value)) {
+                    return promise.resolve(controller);
+                }
+                noControllers.push(
+                    name
+                );
+                return promise.resolve();
+            }
+        );
+    }
+    /**
+    * @function
+    */
+    function processElement(
+        views
+        , name
+        , state
+        , element
+        , controller
+        , renderCb
+    ) {
+        try {
+            var childState, isStateless
+            , id = element.id || generateId(name)
+            ;
+            //if there is a controller then run the view
+            if (!!controller) {
+                //see if the controller is stateless
+                isStateless = element.hasAttribute("stateless");
+                if (!isStateless) {
+                    isStateless =
+                        utils_func_inspector(
+                            controller
+                        )
+                        .params
+                        .length < 3
+                    ;
+                }
+                //get the state
+                if (!isStateless) {
+                    childState = getChildState(
+                        id
+                        , state
+                    );
+                }
+                //if this is not stateless and we are missing a state, throw an error
+                if (!childState && !isStateless) {
+                    renderCb(
+                        new Error(
+                            simpleErrors.missingChildState.replace("{name}", id)
+                        )
+                    );
+                }
+                else {
+                    //replace dots with underscores
+                    element.id = id = id.replace(/[.]/g, "-");
+                    //create the view
+                    views.push(
+                        simpleView(
+                            element
+                            , controller
+                            , childState
+                            , renderCb
+                        )
+                    );
+                }
+            }
+            //otherwise process the children, or execute the render callback
+            else {
+                //if there are children then process those
+                if (element.childNodes.length > 0) {
+                    var children = Array.from(element.childNodes);
+                    views = views.concat(
+                        processElements(
+                            children
+                            , state
+                            , renderCb
+                        )
+                    );
+                }
+                else {
+                    renderCb();
+                }
             }
         }
-        if ($container.hasDependency(name.substring(1) + ".view")) {
-            ctrl =  $container(name + ".view");
-            //make sure we didn't find an object dependency
-            if (isFunc(ctrl)) {
-                return ctrl;
-            }
+        catch(ex) {
+            renderCb(ex);
         }
     }
     /**
@@ -296,7 +417,12 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
     * @function
     */
     function getChildState(id, state) {
-        return resolvePath(id, state).value;
+        var ref = utils_reference(
+            id
+            , state
+        );
+
+        return ref.value;
     }
     /**
     * Destroys the view's child elements
@@ -372,7 +498,16 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         if (!!watchers) {
             watchers.forEach(function forEachWatcher(watcher) {
                 view.watchers = view.watchers.concat(
-                    view.state[cnsts.watch](watcher.path, watcher.handler)
+                    view.state[cnsts.watch](
+                        watcher.path
+                        , function stateNetWrap(event, key) {
+                            watcher.handler(
+                                key
+                                , event.value
+                                , event
+                            );
+                        }
+                    )
                 );
             });
         }
@@ -427,23 +562,25 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             , position
             , newState
         ) {
-            var refId, ref;
+            var childPath, ref, parentState;
             //add the new state to the parent state
-            if (isObject(newState)) {
+            if (is_object(newState)) {
+                //get the parent state
                 if (id.indexOf(".") !== -1 ) {
-                    refId = id.substring(0, id.lastIndexOf("."));
-                    ref = resolvePath(
-                        refId
+                    ref = utils_reference(
+                        id
                         , parentView.state
                     );
-                    ref.value[
-                        id.substring(id.lastIndexOf(".") + 1)
-                    ] = newState;
-                    ref.value.$process();
+                    parentState = ref.parent
+                    childPath = ref.index;
                 }
                 else {
-                    parentView.state[id] = newState;
-                    parentView.state.$process();
+                    parentState = parentView.state;
+                    childPath = id;
+                }
+                //if it's not there then move it
+                if (!(childPath in parentState)) {
+                    parentState[id] = newState;
                 }
             }
 
@@ -460,7 +597,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             )
             ;
             //if there is a selector use it to get the parent element
-            if (isString(selector) && !isEmpty(selector)) {
+            if (is_string(selector) && !is_empty(selector)) {
                 parent = parent.querySelector(selector);
                 if (!parent) {
                     throw new Error(simpleErrors.invalidViewContainerSelector);
@@ -479,7 +616,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             )[0];
 
             //add the element to the parent
-            if (isNill(position)) {
+            if (is_nill(position)) {
                 parent.appendChild(element);
             }
             else {
@@ -498,7 +635,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
         var attrStr = "";
 
         //add the attribute values to the context and update the attr string
-        if (isObject(attributes)) {
+        if (is_object(attributes)) {
             Object.keys(attributes)
             .forEach(function forEachAttr(attrKey) {
                 var cntxtKey = attrKey.replace(/-/g, "")
@@ -563,7 +700,7 @@ function _SimpleView($container, simpleTemplate, simpleErrors, simpleStyle, func
             return view;
         }
         catch(ex) {
-            simpleReporter.error(ex);
+            reporter.error(ex);
             renderCb(ex);
         }
     };

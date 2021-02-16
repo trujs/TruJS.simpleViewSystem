@@ -2,15 +2,15 @@
 *
 * @factory
 */
-function _DeleteStyle(styleHelper) {
+function _DeleteStyle(styleHelper, is_nill, is_empty, is_event) {
 
     /**
     * @worker
     */
     return function DeleteStyle(root, selector, styleName, event) {
         var elements = [root];
-        if (isNill(event)) {
-            if (isEvent(styleName) || isNill(styleName)) {
+        if (is_nill(event)) {
+            if (is_event(styleName) || is_nill(styleName)) {
                 event = styleName;
                 styleName = selector;
                 selector = null;
@@ -19,7 +19,7 @@ function _DeleteStyle(styleHelper) {
         if (!!selector) {
             elements = root.querySelectorAll(selector);
         }
-        if (!isEmpty(elements)) {
+        if (!is_empty(elements)) {
             elements.forEach(function forEachEl(el) {
                 styleHelper.remove(el, styleName);
             });

@@ -3,15 +3,40 @@
 * object
 * @factory
 */
-function _SimpleStyle(createElement, createTextNode, findWatcher, regExForEachMatch) {
+function _SimpleStyle(
+    statenet_common_findStateful
+    , dom_createElement
+    , dom_createTextNode
+    , utils_regExp
+    , is_array
+    , is_nill
+    , utils_reference
+    , utils_copy
+) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^(?:[\r\n \t]*)((?:(?:.)|[\r\n \t])*?)(?:[\r\n \t]*)$/
     , LINE_PATT = /(\r?\n)/g
     , cnsts = {
         "destroy": "$destroy"
-        , "watch": "$watch"
-        , "unwatch": "$unwatch"
+        , "watch": "$addListener"
+        , "unwatch": "$removeListener"
     }
+    /**
+    * @alias
+    */
+    , createElement = dom_createElement
+    /**
+    * @alias
+    */
+    , createTextNode = dom_createTextNode
+    /**
+    * @alias
+    */
+    , regExForEachMatch = utils_regExp.forEachMatch
+    /**
+    * @alias
+    */
+    , findStateful = statenet_common_findStateful
     ;
 
     /**
@@ -64,7 +89,7 @@ function _SimpleStyle(createElement, createTextNode, findWatcher, regExForEachMa
                 selector = text.replace(WSP_PATT, "$1");
                 selectors.push(selector);
                 block = {
-                    "selectors": copy(selectors)
+                    "selectors": utils_copy(selectors)
                     , "body": "\n"
                     , "parent": curBlock
                 };
@@ -151,8 +176,14 @@ function _SimpleStyle(createElement, createTextNode, findWatcher, regExForEachMa
         var watchers = [];
 
         template.replace(TAG_PATT, function (tag, key) {
-            var obj = resolvePath(key, context)
-            , watcher = findWatcher(obj.parent, obj.index);
+            var obj = utils_reference(
+                key
+                , context
+            )
+            , watcher = findStateful(
+                obj.parent
+                , obj.index
+            );
             //add a watch
             if (!!watcher) {
                 watchers.push({ "key": obj.index, "parent": watcher });
@@ -178,9 +209,14 @@ function _SimpleStyle(createElement, createTextNode, findWatcher, regExForEachMa
     */
     function processTemplate(template, context) {
         return template.replace(TAG_PATT, function (tag, key) {
-            var val = resolvePath(key, context).value;
+            var ref = utils_reference(
+                key
+                , context
+            )
+            , val = ref.value
+            ;
 
-            if (isNill(val)) {
+            if (is_nill(val)) {
                 return "";
             }
 
@@ -208,7 +244,7 @@ function _SimpleStyle(createElement, createTextNode, findWatcher, regExForEachMa
     */
     return function SimpleStyle(template, context) {
         //template could be an array
-        if(isArray(template)) {
+        if(is_array(template)) {
             template = template.join("\n");
         }
 
@@ -230,9 +266,12 @@ function _SimpleStyle(createElement, createTextNode, findWatcher, regExForEachMa
         //add the watchers
         watchers.forEach(function (watcher) {
             watcher.guids =
-            watcher.parent[cnsts.watch](watcher.key, function watch() {
-                updateElement(style, template, context);
-            });
+            watcher.parent[cnsts.watch](
+                watcher.key
+                , function watch() {
+                    updateElement(style, template, context);
+                }
+            );
         });
 
         return style;

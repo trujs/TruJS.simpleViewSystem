@@ -2,12 +2,20 @@
 *
 * @factory
 */
-function _SimpleMixin($container, findWatcher) {
-    var mixins = $container.hasDependency("mixins") && $container(".mixins")
-    , cnsts = {
+function _SimpleMixin(
+    mixins
+    , statenet_common_findStateful
+    , utils_reference
+) {
+    var cnsts = {
         "value": "$value"
         , "watch": "$watch"
-    };
+    }
+    /**
+    * @alias
+    */
+    , findStateful = statenet_common_findStateful
+    ;
 
     /**
     * Creates a key value pair for each attribute
@@ -32,17 +40,29 @@ function _SimpleMixin($container, findWatcher) {
         var watcherObjs = [];
 
         watchers.forEach(function forEachWatcher(watcher) {
-            var obj = resolvePath(watcher.path, context)
+            var ref = utils_reference(
+                watcher.path
+                , context
+            )
             , guids
             , handler = watcher.handler;
 
-            watcher = findWatcher(obj.parent, obj.index);
+            watcher = findStateful(ref.parent, ref.index);
 
             if (!!watcher) {
                 watcherObjs.push({
-                    "key": obj.index
+                    "key": ref.index
                     , "parent": watcher
-                    , "guids": watcher[cnsts.watch](obj.index, handler)
+                    , "guids": watcher[cnsts.watch](
+                        ref.index
+                        , function stateNetWrap(event, key) {
+                            handler(
+                                key
+                                , event.value
+                                , event
+                            );
+                        }
+                    )
                 });
             }
         });
