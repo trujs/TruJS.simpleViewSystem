@@ -337,9 +337,20 @@ function _SimpleTemplate(
 
             //add the watchers
             if (result.keys.length > 0) {
-                watchKeys(el, context, result.keys, function () {
-                    el.innerHTML = processValue(value, context).value;
-                });
+                watchKeys(
+                    el
+                    , context
+                    , result.keys,
+                     function setText() {
+                        el.innerHTML =
+                            processValue(
+                                value
+                                , context
+                            )
+                            .value
+                        ;
+                    }
+                );
             }
         }
     }
@@ -383,9 +394,19 @@ function _SimpleTemplate(
 
         //add the watch handler for each key
         if(result.keys.length > 0) {
-            watchKeys(element, context, result.keys, function watchHandler(key, value) {
-                setAttribute(processValue(expr, context));
-            });
+            watchKeys(
+                element
+                , context
+                , result.keys
+                , function watchHandler(key, value) {
+                    setAttribute(
+                        processValue(
+                            expr
+                            , context
+                        )
+                    );
+                }
+            );
         }
 
         setAttribute(result);
@@ -479,15 +500,18 @@ function _SimpleTemplate(
             , "hybrid": !!value.replace(TAG_PATT, "")
         };
 
-        result.value = value.replace(TAG_PATT, function forEachMatch(tag, expr) {
-            var expr = simpleExpression(expr, context);
-            result.keys = result.keys.concat(expr.keys);
-            result.values.push(expr.result);
-            if (is_object(expr.result) || is_func(expr.result)) {
-                return "";
+        result.value = value.replace(
+            TAG_PATT
+            , function forEachMatch(tag, expr) {
+                var expr = simpleExpression(expr, context);
+                result.keys = result.keys.concat(expr.keys);
+                result.values.push(expr.result);
+                if (is_object(expr.result) || is_func(expr.result)) {
+                    return "";
+                }
+                return expr.result;
             }
-            return expr.result;
-        });
+        );
 
         if (!result.hybrid && result.values.length === 1) {
             if (result.value === "null" || result.value === "undefined") {

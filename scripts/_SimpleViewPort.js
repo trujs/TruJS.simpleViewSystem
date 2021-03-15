@@ -3,7 +3,7 @@
 * @factory
 */
 function _SimpleViewPort(
-    controllers_main
+    views_main_controller
     , simpleView
     , simpleTemplate
     , dom_createElement
@@ -71,22 +71,24 @@ function _SimpleViewPort(
                 , context
             )[0];
 
-            //render the main view
-            curView = simpleView(
+            simpleView(
                 element
-                , controllers_main
+                , views_main_controller
                 , state
-                , renderCb
-            );
-
-            function renderCb(err) {
-                if (!loaded) {
+            )
+            .then(
+                function thenFinishRender(view) {
                     loaded = true;
                     viewport.innerHTML = "";
                     viewport.appendChild(element);
-                    renderedCb(err, element);
+                    renderedCb(null);
                 }
-            };
+            )
+            .catch(
+                function catchRenderError(err) {
+                    renderedCb(err);
+                }
+            );
         }
         catch(ex) {
             renderedCb(ex);

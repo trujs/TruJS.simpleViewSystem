@@ -176,17 +176,19 @@ function _SimpleStyle(
         var watchers = [];
 
         template.replace(TAG_PATT, function (tag, key) {
-            var obj = utils_reference(
+            var ref = utils_reference(
                 key
                 , context
             )
-            , watcher = findStateful(
-                obj.parent
-                , obj.index
-            );
+            , watcher = !!ref.parent
+                && findStateful(
+                    ref.parent
+                    , ref.index
+                )
+            ;
             //add a watch
             if (!!watcher) {
-                watchers.push({ "key": obj.index, "parent": watcher });
+                watchers.push({ "key": ref.index, "parent": watcher });
             }
         });
 

@@ -451,7 +451,7 @@ function _SimpleExpression(
                 return {
                     "type": "value"
                     , "keys": !is_nill(res.index)
-                        ? res.keys.concat(res.index)
+                        ? res.keys.concat(res.jpath)
                         : []
                     , "expression": expr
                     , "result": res.value
