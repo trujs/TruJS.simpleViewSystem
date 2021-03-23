@@ -84,7 +84,7 @@ function _SimpleView(
     /**
     * @function
     */
-    function renderView(view, template, context) {
+    function renderView(view, renderedCb, template, context) {
         //create the state context and view template (HTML/CSS)
         return setupView(
             view
@@ -120,8 +120,19 @@ function _SimpleView(
                         , [view]
                     );
                 }
-
+                //inform the view it's done rendering
+                renderedCb();
+                //resolve the view for the render caller
                 return promise.resolve(view);
+            }
+        )
+        //catch errors
+        .catch(
+            function catchRenderError(err) {
+                //inform the view it failed
+                renderedCb(err);
+                //return the error for the caller
+                return promise.reject(err);
             }
         );
     }
@@ -283,6 +294,7 @@ function _SimpleView(
         try {
             var childState, isStateless
             , id = childEl.id || generateId(tagName)
+            , proc = promise.resolve()
             ;
             //see if the controller is stateless
             isStateless = childEl.hasAttribute("stateless");
@@ -297,31 +309,34 @@ function _SimpleView(
             }
             //get the state
             if (!isStateless) {
-                childState = getChildState(
+                proc = getChildState(
                     id
                     , parentState
                 );
             }
-            //if this is not stateless and we are missing a state, throw an error
-            if (!childState && !isStateless) {
-                return promise.reject(
-                    new Error(
-                        simpleErrors.missingChildState.replace("{name}", id)
-                    )
-                );
-            }
-            else {
-                //replace dots with underscores
-                childEl.id = id = id.replace(/[.]/g, "-");
-                //create the view
-                return SimpleView(
-                    childEl
-                    , controller
-                    , childState
-                );
-            }
-
-            return promise.resolve();
+            //check the state and create the view
+            return proc.then(
+                function thenCheckState(childState) {
+                    //if this is not stateless and we are missing a state, throw an error
+                    if (!childState && !isStateless) {
+                        return promise.reject(
+                            new Error(
+                                simpleErrors.missingChildState.replace("{name}", id)
+                            )
+                        );
+                    }
+                    else {
+                        //replace dots with underscores
+                        childEl.id = id = id.replace(/[.]/g, "-");
+                        //create the view
+                        return SimpleView(
+                            childEl
+                            , controller
+                            , childState
+                        );
+                    }
+                }
+            );
         }
         catch(ex) {
             return promise.reject(ex);
@@ -352,6 +367,7 @@ function _SimpleView(
 
         return views;
     }
+
     /**
     * Converts the tag name to camal case
     * @function
@@ -410,12 +426,33 @@ function _SimpleView(
     * @function
     */
     function getChildState(id, state) {
-        var ref = utils_reference(
-            id
-            , state
-        );
-
-        return ref.value;
+        try {
+            //see if the view state is already on the state manager
+            var childState = utils_lookup(
+                id
+                , state
+            );
+            if (!!childState) {
+                return promise.resolve(childState);
+            }
+            //resolve the state from the ioc system
+            return $resolve(
+                [
+                    `.views.${id}.state`
+                    , {"missingAction":"none"}
+                ]
+            )
+            //then add this to the parent state
+            .then(
+                function thenAddtoParent(childState) {
+                    state[id] = childState;
+                    return promise.resolve(state[id]);
+                }
+            )
+        }
+        catch(ex) {
+            return promise.reject(ex);
+        }
     }
     /**
     * Destroys the view's child elements
@@ -469,19 +506,17 @@ function _SimpleView(
     * element that has one
     * @function
     */
-    function createDestroyClosure(view) {
-        return function destroy() {
-            //destroy the child elements
-            destroyChildren(view);
-            //destroy any watchers
-            destroyWatchers(view);
-            //destroy any child views
-            destroyViews(view);
-            //run the context destroy method
-            destroyContext(view);
-            //remove the element
-            view.element.$destroy();
-        };
+    function destroyView(view) {
+        //destroy the child elements
+        destroyChildren(view);
+        //destroy any watchers
+        destroyWatchers(view);
+        //destroy any child views
+        destroyViews(view);
+        //run the context destroy method
+        destroyContext(view);
+        //remove the element
+        view.element.$destroy();
     }
     /**
     * Creates watchers based on the return from the controller
@@ -634,10 +669,10 @@ function _SimpleView(
                         parentView.views.splice(position, 0, childView);
                     }
                     parentView.children.push(element);
+
+                    return promise.resolve(childView);
                 }
             );
-
-
         }
         catch(ex) {
             return promise.reject(ex);
@@ -677,13 +712,10 @@ function _SimpleView(
             })
         ;
     }
-
     /**
-    * @worker
+    * @function
     */
-    return SimpleView;
-
-    function SimpleView(element, controller, state) {
+    function createView(element, controller, state, resolve, reject) {
         try {
             //create the view token
             var view = {
@@ -696,23 +728,37 @@ function _SimpleView(
                 , "views": []
                 , "watchers": []
             }
+            , resolved = false
             , watchers;
 
             //create the render function with the view token
             view.render = renderView.bind(
                 null
                 , view
+                , function renderedCb(err) {
+                    if (resolved) {
+                        return;
+                    }
+                    resolved = true;
+                    if (!err) {
+                        resolve(view);
+                    }
+                    else {
+                        reject(err);
+                    }
+                }
             );
             view.render.view = view;
-
             //create the add child view function
             view.addChildView = addChildView.bind(
                 null
                 , view
             );
-
             //create the destroy closure
-            view[cnsts.destroy] = createDestroyClosure(view);
+            view[cnsts.destroy] = destroyView.bind(
+                null
+                , view
+            );
 
             //execute the controller
             watchers = controller(
@@ -730,5 +776,21 @@ function _SimpleView(
         catch(ex) {
             return promise.reject(ex);
         }
+    }
+
+    /**
+    * @worker
+    */
+    return SimpleView;
+
+    function SimpleView(element, controller, state) {
+        return new promise(
+            createView.bind(
+                null
+                , element
+                , controller
+                , state
+            )
+        );
     };
 }

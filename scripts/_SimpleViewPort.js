@@ -3,7 +3,8 @@
 * @factory
 */
 function _SimpleViewPort(
-    views_main_controller
+    promise
+    , views_main_controller
     , simpleView
     , simpleTemplate
     , dom_createElement
@@ -24,7 +25,6 @@ function _SimpleViewPort(
         , state
         , context
         , attributes
-        , renderedCb
     ) {
         try {
             var template = "<main${attributes}></main>"
@@ -71,7 +71,7 @@ function _SimpleViewPort(
                 , context
             )[0];
 
-            simpleView(
+            return simpleView(
                 element
                 , views_main_controller
                 , state
@@ -81,17 +81,12 @@ function _SimpleViewPort(
                     loaded = true;
                     viewport.innerHTML = "";
                     viewport.appendChild(element);
-                    renderedCb(null);
-                }
-            )
-            .catch(
-                function catchRenderError(err) {
-                    renderedCb(err);
+                    return promise.resolve(view);
                 }
             );
         }
         catch(ex) {
-            renderedCb(ex);
+            return promise.reject(ex);
         }
     };
 }
