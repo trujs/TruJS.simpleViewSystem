@@ -25,6 +25,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         , "freeze": "__freeze"
         , "seal": "__seal"
         , "extensible": "__ext"
+        , "configurable": "__configurable"
         , "prototype": "__proto"
         , "async": "__async"
         , "watch": "$watch"
@@ -404,6 +405,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         //a reference to a possible watcher
         var property = {
             "enumerable": true
+            , "configurable": options.configurable
             , "handlers": {}
             , "watcher": null
             , "key": key
@@ -543,6 +545,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
             , "extensible": obj.hasOwnProperty(cnsts.ext) ? obj[cnsts.ext] : options.extensible
             , "prototype": proto
             , "async": !!(obj.hasOwnProperty(cnsts.async) ? obj[cnsts.async] : options.async)
+            , "configurable": obj.hasOwnProperty(cnsts.configurable) ? obj[cnsts.configurable] : options.configurable
         };
         if (isNill(options.freeze)) {
             options.freeze = true;
@@ -552,6 +555,9 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         }
         if (isNill(options.extensible)) {
             options.extensible = true;
+        }
+        if (isNill(options.configurable)) {
+            options.configurable = false;
         }
         //if there is a prototype on the options and it's not a watcher
         // then create a watcher with the prototype object
@@ -582,6 +588,7 @@ function _SimpleWatcher(newGuid, simpleErrors, funcAsync, simpleReporter) {
         }
 
         delete obj[cnsts.freeze];
+        delete obj[cnsts.configurable];
         delete obj[cnsts.seal];
         delete obj[cnsts.ext];
         delete obj[cnsts.prototype];
