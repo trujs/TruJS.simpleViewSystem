@@ -33,6 +33,11 @@ function _SimpleView(
         , "value": "$value"
         , "content": "$content"
         , "tagTemplate": "<{tagName} id=\"{id}\"{attributes}></{tagName}>"
+        /**
+        * The name of the element attribute which holds the namespace
+        * @constant
+        */
+        , "viewNamespaceAttribName": "view-ns"
     }
     /**
     * A list of tag names that have already been checked for a controller and don't have one
@@ -96,7 +101,8 @@ function _SimpleView(
             function thenProcessChildElements() {
                 if (!is_empty(view.children)) {
                     return processChildElements(
-                        view.children
+                        view.namespace
+                        , view.children
                         , view.state
                     );
                 }
@@ -216,7 +222,12 @@ function _SimpleView(
         if (!!view.htmlTemplate) {
             //process the html and get the elements
             view.children = Array.prototype.slice.apply(
-                simpleTemplate(view.element, view.htmlTemplate, view.stateContext)
+                simpleTemplate(
+                    view.namespace
+                    , view.element
+                    , view.htmlTemplate
+                    , view.stateContext
+                )
             );
         }
 
@@ -230,10 +241,11 @@ function _SimpleView(
     /**
     * @function
     */
-    function processChildElements(children, parentState) {
+    function processChildElements(parentNamespace, children, parentState) {
         var procs = children.map(
             processChildElement.bind(
                 null
+                , parentNamespace
                 , parentState
             )
         );
@@ -253,7 +265,7 @@ function _SimpleView(
     /**
     * @function
     */
-    function processChildElement(parentState, childEl) {
+    function processChildElement(parentNamespace, parentState, childEl) {
         //if this is a text node, skip all of this
         if (childEl.nodeType !== 1) {
             return ;
@@ -269,8 +281,10 @@ function _SimpleView(
         .then(
             function thenProcessView(controller) {
                 if (is_func(controller)) {
+                    //process the child view
                     return processChildView(
-                        tagName
+                        parentNamespace
+                        , tagName
                         , parentState
                         , childEl
                         , controller
@@ -279,7 +293,8 @@ function _SimpleView(
                 //if there isn't a controller then process the children
                 if (childEl.childNodes.length > 0) {
                     return processChildElements(
-                        Array.from(childEl.childNodes)
+                        parentNamespace
+                        , Array.from(childEl.childNodes)
                         , parentState
                     );
                 }
@@ -290,7 +305,7 @@ function _SimpleView(
     /**
     * @function
     */
-    function processChildView(tagName, parentState, childEl, controller) {
+    function processChildView(parentNamespace, tagName, parentState, childEl, controller) {
         try {
             var childState, isStateless
             , id = childEl.id || generateId(tagName)
@@ -327,12 +342,13 @@ function _SimpleView(
                     }
                     else {
                         //replace dots with underscores
-                        childEl.id = id = id.replace(/[.]/g, "-");
+                        childEl.id = id.replace(/[.]/g, "-");
                         //create the view
                         return SimpleView(
                             childEl
                             , controller
                             , childState
+                            , parentNamespace
                         );
                     }
                 }
@@ -396,7 +412,10 @@ function _SimpleView(
         return $resolve(
             [
                `.views.${name}.controller`
-               , {"missingAction":"none"}
+               , {
+                   "missingAction":"none"
+                   , "caseInsensitive": true
+               }
             ]
         )
         .then(
@@ -507,6 +526,12 @@ function _SimpleView(
     * @function
     */
     function destroyView(view) {
+        //remove the element from the parent now to stop any rendering
+        if (!!view.element.parentNode) {
+            view.element.parentNode.removeChild(
+                view.element
+            );
+        }
         //destroy the child elements
         destroyChildren(view);
         //destroy any watchers
@@ -634,6 +659,12 @@ function _SimpleView(
                 , id
                 , attributes
             )
+            //determine the view namespace
+            , viewNamespace = getViewNamespace(
+                {
+                    "tagName": tagName
+                }
+            )
             ;
             //if there is a selector use it to get the parent element
             if (is_string(selector) && !is_empty(selector)) {
@@ -644,14 +675,16 @@ function _SimpleView(
             }
             //run a temp element through the simple template to process the tagHTML
             tempEl = simpleTemplate(
-                "temp"
+                viewNamespace
+                , "temp"
                 , tagHtml
                 , parentView.context
             );
             element = tempEl[0];
             //create the view the same way it would be created
             return processChildElement(
-                parentView.state
+                parentView.namespace
+                , parentView.state
                 , element
             )
             .then(
@@ -715,12 +748,16 @@ function _SimpleView(
     /**
     * @function
     */
-    function createView(element, controller, state, resolve, reject) {
+    function createView(parentNamespace, element, controller, state, resolve, reject) {
         try {
             //create the view token
             var view = {
                 "element": element
                 , "name": getElementName(element)
+                , "namespace": getViewNamespace(
+                    element
+                    , parentNamespace
+                )
                 , "state": state
                 , "controller": controller
                 , "attributes": getAttributes(element)
@@ -731,6 +768,11 @@ function _SimpleView(
             , resolved = false
             , watchers;
 
+            //add the view-ns attribute
+            element.setAttribute(
+                'view-ns'
+                , view.namespace
+            );
             //create the render function with the view token
             view.render = renderView.bind(
                 null
@@ -759,7 +801,6 @@ function _SimpleView(
                 null
                 , view
             );
-
             //execute the controller
             watchers = controller(
                 view.render
@@ -777,16 +818,27 @@ function _SimpleView(
             return promise.reject(ex);
         }
     }
+    /**
+    * @function
+    */
+    function getViewNamespace(element, parentNamespace) {
+        var viewName = element.tagName
+            .toLowerCase()
+            .replace(/-/g, ".")
+        ;
+        return `${parentNamespace}.${viewName}`;
+    }
 
     /**
     * @worker
     */
     return SimpleView;
 
-    function SimpleView(element, controller, state) {
+    function SimpleView(element, controller, state, parentNamespace = "$") {
         return new promise(
             createView.bind(
                 null
+                , parentNamespace
                 , element
                 , controller
                 , state

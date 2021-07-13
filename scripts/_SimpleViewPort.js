@@ -5,16 +5,23 @@
 function _SimpleViewPort(
     promise
     , views_main_controller
+    , views_main_state
     , simpleView
     , simpleTemplate
     , dom_createElement
+    , view_userEventManager
     , is_object
+    , utils_apply
 ) {
     var curState, curView
     /**
     * @alias
     */
     , createElement = dom_createElement
+    /**
+    * @alias
+    */
+    , userEventManager = view_userEventManager
     ;
 
     /**
@@ -43,10 +50,19 @@ function _SimpleViewPort(
                 );
             }
 
+            //apply main's state to the application's state
+            utils_apply(
+                views_main_state
+                , state.main
+            )
+
             if (!context) {
                 context = {};
             }
-            Object.setPrototypeOf(context, state);
+            Object.setPrototypeOf(
+                context
+                , state.main
+            );
 
             template = template.replace(
                 "${attributes}"
@@ -67,14 +83,21 @@ function _SimpleViewPort(
 
             //create the template element
             element = simpleTemplate(
-                template
+                "$.main"
+                , template
                 , context
             )[0];
+
+            //initialize the user event manager
+            userEventManager.initialize(
+                element
+                , state.main.userEventState
+            );
 
             return simpleView(
                 element
                 , views_main_controller
-                , state
+                , curState.main
             )
             .then(
                 function thenFinishRender(view) {
