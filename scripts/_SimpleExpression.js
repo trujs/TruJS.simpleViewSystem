@@ -349,7 +349,7 @@ function _SimpleExpression(
         var func = utils_reference(path, data).value
         , keysLoaded = false
         , expr = {
-            "type": "function"
+            "type": "bind"
             , "keys": []
             , "expression": value
             , "result": wrapped
