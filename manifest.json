@@ -1,28 +1,32 @@
 {
     "name": "TruJS.simpleViewSystem"
-    , "version": "0.0.4"
+
+    , "config": {
+        "strict": true
+        , "output": "TruJS/simpleViewSystem"
+    }
+    , "iocNamePrefix": "ioc-controller"
+
     , "entries": [
         {
-            "type": "module"
-
-            , "repos": [
-                {
-                    "type": "git"
-                    , "name": "TruJS"
-                    , "url": "https://github.com/trujs/TruJS.git"
-                    , "branch": "version-0.1"
-                }
-            ]
-
-            , "format": "browser"
-            , "minify": false
-            , "namespace": "SVS"
+            "type": "ioc.monolith"
+            , "dtree": "dtree.json"
+            , "config": {
+                "dtreeFileName": "dtree.js"
+                , "fileName": "index.js"
+                , "engine": "browser"
+            }
         }, {
             "type": "test"
-
-            , "format": "browser"
-
-            , "output": "./builds/{name}/"
+            , "units": {
+                "controller": 3
+                , "app": 0
+            }
+            , "config": {
+                "fileName": "test.json"
+            }
         }
+        , "{PunyJS.ioc}/manifests/base.manifest.json"
+        , "{PunyJS.ioc}/manifests/browser.manifest.json"
     ]
 }

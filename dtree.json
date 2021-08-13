@@ -1,0 +1,37 @@
+{
+    "document": ["+document"]
+
+    , "is": [{
+        "nill": [":PunyJS.core.is.Nill"]
+        , "string": [":PunyJS.core.is.String"]
+        , "object": [":PunyJS.core.is.Object"]
+        , "array": [":PunyJS.core.is.Array"]
+        , "func": [":PunyJS.core.is.Func"]
+    }]
+    , "utils": [{
+        "reference": [":PunyJS.core.object.Reference"]
+    }]
+
+    , "classHelper": [":PunyJS.core.dom._ClassHelper", []]
+    , "styleHelper": [":PunyJS.core.dom._StyleHelper", []]
+    , "elementHelper": [":PunyJS.core.dom._ElementHelper", []]
+    , "simpleErrors": [":TruJS.simpleViewSystem.scripts.SimpleErrors"]
+    , "simpleExpression": [":TruJS.simpleViewSystem.scripts._SimpleExpression", []]
+    , "simpleMixin": [":TruJS.simpleViewSystem.scripts._SimpleMixin", []]
+    , "xmlBindVariableParser": [":TruJS.simpleViewSystem.scripts._XMLBindVariableParser", []]
+    , "simpleTemplate": [":TruJS.simpleViewSystem.scripts._SimpleTemplate", []]
+    , "simpleStyle": [":TruJS.simpleViewSystem.scripts._SimpleStyle", []]
+    , "simpleView": [":TruJS.simpleViewSystem.scripts._SimpleView", []]
+    , "simpleViewPort": [":TruJS.simpleViewSystem.scripts._SimpleViewPort", []]
+    , "createSimpleNamespace": [":TruJS.simpleViewSystem.scripts.CreateSimpleNamespace"]
+    , "simpleDefaultController": [":TruJS.simpleViewSystem.scripts._SimpleDefaultController"]
+    , "simpleMethods": [{
+        "$update": [":TruJS.simpleViewSystem.scripts.simpleMethods._UpdateAttribute", []]
+        , "$delete": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteAttribute", []]
+        , "$addClass": [":TruJS.simpleViewSystem.scripts.simpleMethods._AddClass", []]
+        , "$delClass": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteClass", []]
+        , "$toggleClass": [":TruJS.simpleViewSystem.scripts.simpleMethods._ToggleClass", []]
+        , "$updStyle": [":TruJS.simpleViewSystem.scripts.simpleMethods._UpdateStyle", []]
+        , "$delStyle": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteStyle", []]
+    }]
+}
