@@ -7,4 +7,7 @@
     , "missingProperty": "[MissingProperty] The property '{key}' does not exist in this object."
     , "destroyed": "[Destroyed] Unable to access the key {key}. The watcher has been destroyed an should no longer be used."
     , "invalidViewContainerSelector": "[InvalidViewContainerSelector] The selector supplied, to find the containing element for the child view, did not return an element."
+    , "invalid_tag_contents": "[Invalid tag contents] The XML tag has an invalid character within it's delimeters <>"
+    , "unmatched_end_tag": "[Unmatched End Tag] An end tag was encountered but it does not match the current tag"
+    , "empty_bind_variable": "[Empty Bind Variable] A bind variable signature was found, but ther wasn't anything in it"
 }
