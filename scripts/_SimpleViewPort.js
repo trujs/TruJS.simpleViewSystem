@@ -86,7 +86,7 @@ function _SimpleViewPort(
                 "$.main"
                 , template
                 , context
-            )[0];
+            ).children[0];
 
             //initialize the user event manager
             userEventManager.initialize(

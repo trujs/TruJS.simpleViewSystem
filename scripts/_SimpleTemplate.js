@@ -17,6 +17,7 @@ function _SimpleTemplate(
     , simpleExpression
     , simpleMixin
     , simpleMethods
+    , createSimpleNamespace
     , view_userEventManager
     , statenet_common_findStateful
     , dom_createElement
@@ -88,6 +89,17 @@ function _SimpleTemplate(
         if (!tag || is_string(tag)) {
             tag = createElement(tag || "div");
         }
+        //if the tag already has children, see if we can destroy them
+        if (tag.children.length > 0) {
+            Array.from(tag.children)
+            .forEach(
+                function forEachOldChild(childEl) {
+                    if (childEl.hasOwnProperty("$destroy")) {
+                        childEl.$destroy();
+                    }
+                }
+            );
+        }
         //add the inner html to the tag
         tag.innerHTML = template;
 
@@ -137,54 +149,6 @@ function _SimpleTemplate(
                 , data
             );
         }
-    }
-    /**
-    * Uses the parent namespace and the node tagName and id to create a local namespace representative of the node
-    * @function
-    */
-    function createNamespace(parentNamespace, node) {
-        //if this is the view element, don't add anything
-        if (!!node.hasAttribute && node.hasAttribute("view-ns")) {
-            return parentNamespace;
-        }
-        var ordinal = findChildOrdinal(
-            node
-        )
-        , nodeName = node.nodeName.toLowerCase()
-        , path = ordinal !== -1
-            ? `${parentNamespace}.[${ordinal}]${nodeName}`
-            : `${parentNamespace}.${nodeName}`
-        ;
-        //add the id if there is one
-        if (!!node.id) {
-            path+= `#${node.id}`;
-        }
-
-        return path;
-    }
-    /**
-    * Finds the index of the element within its parnet's children collection
-    * @function
-    */
-    function findChildOrdinal(node) {
-        var parentNode = node.parentNode
-        , ordinal = -1
-        ;
-
-        if (!!parentNode) {
-            Array.from(parentNode.children)
-            .every(
-                function findChild(child, index) {
-                    if (child === node) {
-                        ordinal = index;
-                        return false;
-                    }
-                    return true;
-                }
-            );
-        }
-
-        return ordinal;
     }
     /**
     * Create the context object, making data the prototype
@@ -287,7 +251,7 @@ function _SimpleTemplate(
                     , context
                 );
                 //the namespace can be created now
-                namespace = createNamespace(
+                namespace = createSimpleNamespace(
                     parentNamespace
                     , element
                 );
@@ -902,6 +866,6 @@ function _SimpleTemplate(
             , data
         );
 
-        return element.childNodes;
+        return element;
     };
 }

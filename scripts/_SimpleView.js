@@ -227,7 +227,7 @@ function _SimpleView(
                     , view.element
                     , view.htmlTemplate
                     , view.stateContext
-                )
+                ).children
             );
         }
 
@@ -674,13 +674,11 @@ function _SimpleView(
                 }
             }
             //run a temp element through the simple template to process the tagHTML
-            tempEl = simpleTemplate(
+            element = simpleTemplate(
                 viewNamespace
-                , "temp"
                 , tagHtml
                 , parentView.context
-            );
-            element = tempEl[0];
+            ).children[0];
             //create the view the same way it would be created
             return processChildElement(
                 parentView.namespace
