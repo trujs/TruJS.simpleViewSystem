@@ -5,8 +5,10 @@
         "nill": [":PunyJS.core.is.Nill"]
         , "string": [":PunyJS.core.is.String"]
         , "object": [":PunyJS.core.is.Object"]
+        , "objectValue": [":PunyJS.core.is.ObjectValue"]
         , "array": [":PunyJS.core.is.Array"]
         , "func": [":PunyJS.core.is.Func"]
+        , "promise": [":PunyJS.core.is.Promise"]
     }]
     , "utils": [{
         "reference": [":PunyJS.core.object.Reference"]

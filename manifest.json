@@ -10,6 +10,9 @@
     , "entries": [
         {
             "type": "ioc.monolith"
+            , "base": [
+                "{PunyJS.ui.gui.expression}/dtree.json"
+            ]
             , "dtree": "dtree.json"
             , "config": {
                 "dtreeFileName": "dtree.js"

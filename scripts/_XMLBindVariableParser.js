@@ -3,8 +3,10 @@
 * @factory
 */
 function _XMLBindVariableParser(
-    simpleExpression
+    expression_interface
     , is_nill
+    , is_func
+    , is_objectValue
     , simpleErrors
 ) {
     /**
@@ -40,8 +42,7 @@ function _XMLBindVariableParser(
         */
         , "textExprTypeList": [
             "literal"
-            , "value"
-            , "function"
+            , "variable"
         ]
     }
     /**
@@ -56,19 +57,19 @@ function _XMLBindVariableParser(
     /**
     * @worker
     */
-    function XMLBindVariableParser(xmlMarkup, context) {
+    function XMLBindVariableParser(xmlMarkup) {
         var tokens = tokenize(
             xmlMarkup
         )
-        , pathExpressionMap = extractBindExpressions(
+        , bindExpressionMap = extractBindExpressions(
             tokens
-            , context
         )
-        , cleanMarkup = substituteBindVars(
+        , cleanMarkup = cleanXMLMarkup(
             tokens
-            , context
         )
-        ;
+        , pathExpressionMap = combineAttributesToTag(
+            bindExpressionMap
+        );
 
         return {
             "pathExpressionMap": pathExpressionMap
@@ -90,6 +91,7 @@ function _XMLBindVariableParser(
         , openEndTag
         , tagName, attributeName
         , inBindExpression
+        , inComment = false
         ;
         //loop through each character and create tokens for tag delimeters
         for(let c = 0, l = xmlMarkup.length; c < l; c++) {
@@ -231,6 +233,37 @@ function _XMLBindVariableParser(
             }
             //if we are in a string literal
             else if (!!stringChar) {
+                curText+= curChar;
+            }
+            //check for starting comment
+            else if (!inComment && curChar === "<" && nextChar === "!" && xmlMarkup.substr(c, 4) === "<!--") {
+                inComment = true;
+                //add the comment start token
+                tokens.push(
+                    `(${line},${c})COMMENT:START`
+                );
+                c = c + 3;
+            }
+            //if we are leaving a comment
+            else if (!!inComment && prevChar === curChar && curChar === "-" && nextChar === ">") {
+                inComment = false;
+                //remove the first dash from the text
+                curText = curText.substring(0, curText.length - 1);
+                //add the comment token
+                tokens.push(
+                    `(${line},${c - curText.length})COMMENT:${curText}`
+                );
+                //add the comment end token
+                tokens.push(
+                    `(${line},${c})COMMENT:END`
+                );
+                //clear the curText for the next round
+                curText = "";
+                //increment to skip the next char
+                c++;
+            }
+            //if we are in a comment
+            else if (!!inComment) {
                 curText+= curChar;
             }
             //check for an opening begin tag
@@ -417,7 +450,7 @@ function _XMLBindVariableParser(
     * Analyzes the tokens, finding bind variable text, and converts them to simple expressions, while keeping track of the xml-path to the bind variable
     * @function
     */
-    function extractBindExpressions(tokens, context) {
+    function extractBindExpressions(tokens) {
         //holds the segments for the current tag xml path
         var xpath = [
             "$"
@@ -593,7 +626,7 @@ function _XMLBindVariableParser(
                     ]++;
                     //create a text node path
                     xpath.push(
-                        `[${curChildCount}]Text`
+                        `[${curChildCount}]#text`
                     );
                 }
 
@@ -608,6 +641,7 @@ function _XMLBindVariableParser(
             //if this is tag text and we're not in an attribute this is the attrib name
             //handles inAttrib
             else if (tokenType === "TAGTEXT") {
+                //if this is not an attribute then set the name
                 if (!inAttrib) {
                     xpath.push(
                         tokenVal
@@ -615,9 +649,17 @@ function _XMLBindVariableParser(
                     //identify that we're inside an attribute
                     inAttrib = true;
                 }
+                //otherwise if this is in a string then record the value
                 else if (inString) {
                     textIndex+= tokenVal.length;
                     cleanText+= tokenVal;
+                }
+                //otherwise the last attribute was a stand alone attribute
+                else {
+                    xpath.pop();
+                    xpath.push(
+                        tokenVal
+                    );
                 }
             }
             //tag bind expression
@@ -626,6 +668,7 @@ function _XMLBindVariableParser(
                 if (textIndex === -1) {
                     textIndex = 0;
                 }
+                //create the tag entry if it doesn't exist
                 if (!pathExpressionMap.hasOwnProperty(xpath.join("."))) {
                     //add the attribute meta data container
                     pathExpressionMap[
@@ -642,8 +685,9 @@ function _XMLBindVariableParser(
                 ]
                 .expressions[
                     textIndex
-                ] = tokenVal
-                ;
+                ] = expression_interface(
+                    tokenVal
+                );
             }
             //text bind variables
             else if (tokenType === "BINDEXP") {
@@ -661,7 +705,7 @@ function _XMLBindVariableParser(
                     ]++;
                     //add the path to the
                     xpath.push(
-                        `[${curChildCount}]Text`
+                        `[${curChildCount}]#text`
                     );
                 }
                 //create the text node entry if one doesn't exist
@@ -681,8 +725,9 @@ function _XMLBindVariableParser(
                 ]
                 .expressions[
                     textIndex
-                ] = tokenVal
-                ;
+                ] = expression_interface(
+                    tokenVal
+                );
             }
 
             //record this if it's not a terminator
@@ -697,65 +742,161 @@ function _XMLBindVariableParser(
     * Analyzes the tokens, finding bind variable and
     * @function
     */
-    function substituteBindVars(tokens, context) {
+    function cleanXMLMarkup(tokens) {
         var cleanMarkup = ""
-        , token
+        , token, tokenType, tokenVal
         , expr
+        , value
+        , inTag = false
+        , hasBindExpr = false
+        , stringChar
+        , curAttribName
+        , curAttribValue = ""
+        , lastNonTermToken
         ;
         //loop through the tokens, using them to re-assemble the xml
-        for(let t = 0, l = tokens.length; t < l; t++) {
+        for (let t = 0, l = tokens.length; t < l; t++) {
             //get a reference to the token
             token = tokens[t]
                 .substring(
                     tokens[t].indexOf(")") + 1
                 )
             ;
+            tokenType = token.substring(
+                0
+                , token.indexOf(":")
+            );
+            tokenVal = token.substring(
+                token.indexOf(":") + 1
+            );
+            //handle inTag
+            if (token === "STARTTAG:OPEN" || token === "ENDTAG:OPEN") {
+                inTag = true;
+            }
+            else if (
+                token === "STARTTAG:CLOSE"
+                || token === "ENDTAG:CLOSE"
+                || token === "STARTTAG:LEAF"
+            ) {
+                inTag = false;
+            }
+            //handle inString
+            if (
+                !stringChar
+                && cnsts.stringTerminators.indexOf(tokenVal) !== -1
+            ) {
+                stringChar = tokenVal;
+            }
+            else if (!!stringChar && stringChar === tokenVal) {
+                stringChar = null;
+                //ending the string literal means ending the attribute
+                //if a bind expression was not found then add the attribute and value
+                if (!hasBindExpr) {
+                    cleanMarkup+= ` ${curAttribName}=\"${curAttribValue}\"`;
+                }
+                else {
+                    hasBindExpr = false;
+                }
+                curAttribName = null;
+                curAttribValue = "";
+            }
+
             //if a bindvar token, ignore
-            if (token.indexOf("BINDVAR") !== -1) {
+            if (tokenType === "BINDVAR" || tokenType === "TAGBINDVAR") {
                 continue;
             }
-            //if a bindexp leave in place
-            else if (token.indexOf("BINDEXP:") === 0) {
-                cleanMarkup+= `{:${token.substring(8)}:}`
+            //if a bindexp in a text node then leave in place
+            else if (tokenType === "BINDEXP") {
+                cleanMarkup+= `{:${tokenVal}:}`
             }
-            //if a tag bind evaluate and replace
-            else if (token.indexOf("TAGBINDEXP:") === 0) {
-                expr = simpleExpression(
-                    token.substring(11)
-                    , context
-                );
-                if (cnsts.textExprTypeList.indexOf(expr.type) !== -1) {
-                    cleanMarkup += is_nill(expr.result)
-                        ? ""
-                        : expr.result
-                    ;
-                }
+            //if a tag bind expression in a tag
+            else if (tokenType === "TAGBINDEXP") {
+                hasBindExpr = true;
+                continue;
             }
-            //otherwise
-            else {
-                //if this is text then add it
-                if (token.indexOf("TEXT:") === 0) {
-                    cleanMarkup+= token.substring(5);
+            //if this is text in a text node then add it
+            else if (tokenType === "TEXT") {
+                cleanMarkup+= tokenVal;
+            }
+            //if this is text in a tag
+            else if (tokenType == "TAGTEXT") {
+                //if there isn't an attribute name then this must be it
+                if (!curAttribName) {
+                    curAttribName = tokenVal;
                 }
-                else if (token.indexOf("TAGTEXT:") === 0) {
-                    cleanMarkup+= token.substring(8);
+                //if there is an attribute name and this is part of a string
+                //  literal then this is part of the attribute
+                else if (!!stringChar) {
+                    curAttribValue+= tokenVal;
                 }
-                else if (token.indexOf("TERM:") === 0) {
-                    cleanMarkup+= token.substring(5);
-                }
-                else if (token.indexOf("TAGNAME:") === 0) {
-                    cleanMarkup+= token.substring(8);
-                }
-                else if (token.indexOf("ENDTAGNAME:") === 0) {
-                    cleanMarkup+= token.substring(11);
-                }
-                //otherwise it should be a tag token
+                //otherwise the previous attribute had no value and this is
+                // another attribute name
                 else {
-                    cleanMarkup+= cnsts.tokenCharMap[token];
+                    cleanMarkup+= ` ${curAttribName}`;
+                    curAttribName = tokenVal;
+                    curAttribValue = "";
                 }
+            }
+            else if (tokenType === "TERM") {
+                if (!inTag) {
+                    cleanMarkup+= tokenVal;
+                }
+            }
+            else if (tokenType === "TAGNAME") {
+                cleanMarkup+= tokenVal;
+            }
+            else if (tokenType === "ENDTAGNAME") {
+                cleanMarkup+= tokenVal;
+            }
+            else if (tokenType === "COMMENT") {
+                //skip comments
+            }
+            //otherwise it should be a tag token
+            else {
+                cleanMarkup+= cnsts.tokenCharMap[token];
             }
         }
 
         return cleanMarkup;
+    }
+    /**
+    * Attributes are added as individual entries, combine and roll up those entries to the tag level
+    * @function
+    */
+    function combineAttributesToTag(pathExpressionMap) {
+        var combinedPathExprMap = {};
+
+        Object.keys(pathExpressionMap)
+        .forEach(
+            function forEachPathExprMap(path) {
+                var item = pathExpressionMap[path]
+                , pathAr
+                , attribName
+                , tagPath
+                ;
+                //text entries can go right on the combine collection, they
+                //   aren't attributes
+                if (item.type === "text") {
+                    combinedPathExprMap[path] = item;
+                    return;
+                }
+                //remove the attribute name from the path and get the tag path
+                pathAr = path.split(".");
+                attribName = pathAr.pop();
+                tagPath = pathAr.join(".");
+                //see if we have a tag entry already
+                if (!combinedPathExprMap.hasOwnProperty(tagPath)) {
+                    //add a new entry forthis tag
+                    combinedPathExprMap[tagPath] = {
+                        "type": "tag"
+                        , "attributes": {}
+                    };
+                }
+                //add the attribute to the tag's collection
+                combinedPathExprMap[tagPath].attributes[attribName] = item;
+            }
+        );
+
+        return combinedPathExprMap;
     }
 }

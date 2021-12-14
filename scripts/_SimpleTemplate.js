@@ -17,12 +17,16 @@ function _SimpleTemplate(
     , simpleExpression
     , simpleMixin
     , simpleMethods
+    , simpleStyle
     , createSimpleNamespace
+    , xmlBindVariableParser
     , view_userEventManager
     , statenet_common_findStateful
     , dom_createElement
+    , dom_createTextNode
     , is_array
     , is_object
+    , is_objectValue
     , is_empty
     , is_func
     , is_nill
@@ -109,46 +113,231 @@ function _SimpleTemplate(
     *
     * @function
     */
-    function processSelfTag(element, context) {
+    function processSelfTag(element, pathExprMap, context) {
         var self = element.children[0]
-        , attrs = Array.prototype.slice.apply(self.attributes)
-        , children = Array.prototype.slice.apply(self.childNodes)
+        , attrs = Array.from(self.attributes)
+        , children = Array.from(self.childNodes)
         , removeList = []
         ;
-        //bind the attributes and add them to the element
-        attrs.forEach(function (attr) {
-            self.removeAttributeNode(attr);
-            element.setAttributeNode(attr);
-            if (processAttribute(element, context, attr)) {
-                removeList.push(attr);
+        //loop through the self tag attributes (non-expression attributes)
+        //  and add/append them to the element
+        attrs.forEach(
+            function forEachAttribute(attr) {
+                combineSelfTextAttribute(
+                    element
+                    , attr
+                );
             }
-        });
-        //remove any on attributes that we added handlers for
-        removeList.forEach(function forEachRem(attr) {
-            element.removeAttributeNode(attr);
-        });
+        );
+        //add the mapped expressions to the element
+        processMapAttributes(
+            element
+            , pathExprMap
+            , context
+            , "$.[0]self"
+        );
+        //update the path map to remove the [0]self from each
+        Object.keys(pathExprMap)
+        .forEach(
+            function forEachMapKey(key) {
+                var newKey;
+                //remove the leading
+                if (key.indexOf("$.[0]self") === 0) {
+                    pathExprMap[
+                        key.replace("$.[0]self", "$")
+                    ] = pathExprMap[key]
+                    ;
+                    delete pathExprMap[key];
+                }
+            }
+        );
         //move the children
-        children.forEach(function (node) {
-            if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
-                element.insertBefore(node, self);
+        children.forEach(
+            function forEachSelfChild(node) {
+                //element or text node that isn't just whitespace
+                if (
+                    node.nodeType === 1
+                    || (node.nodeType === 3
+                        && !WSP_PATT.test(node.nodeValue))
+                ) {
+                    element.insertBefore(node, self);
+                }
             }
-        });
-        //remove the self element
-        self.parentNode.removeChild(self);
+        );
+        //remove the self element from the parent element
+        self.parentNode
+            .removeChild(self)
+        ;
     }
     /**
-    * Begins the element processing, resolves/rejects the promise
+    * Combines the attribute with the element, appending with a space if the attribute name exists in element already
     * @function
     */
-    function process(viewNamespace, node, data) {
-        //create the starting context object and start processing the node
-        if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
-            processElement(
-                viewNamespace
-                , node
-                , data
+    function combineSelfTextAttribute(element, attribute) {
+        if (element.hasAttribute(attribute.name)) {
+            element.setAttribute(
+                attribute.name
+                , `${element.getAttribute(attribute.name)} ${attribute.value}`
             );
         }
+        else {
+            element.setAttribute(
+                attribute.name
+                , attribute.value
+            );
+        }
+    }
+
+    /**
+    * Processes the element including special tags, if and repeat, and
+    * processes it's shildren
+    * @function
+    */
+    function processElement(parentNamespace, element, pathExprMap, data, path) {
+        var context = createContext(element, data)
+        , eventAttributes
+        , namespace
+        ;
+        //a temporary container for watchers
+        element.watchers = [];
+        //see if this is a repeat
+        if (element.nodeName.toLowerCase() === "repeat") {
+            processRepeatElement(
+                parentNamespace
+                , element
+                , pathExprMap
+                , context
+                , path
+            );
+        }
+        else if (element.nodeName.toLowerCase() === "if") {
+            processIfElement(
+                parentNamespace
+                , element
+                , pathExprMap
+                , context
+                , path
+            );
+        }
+        else if (element.nodeName.toLowerCase() === "else") {
+            //remove the else
+            element.parentNode.removeChild(element);
+        }
+        else if (
+            element.nodeName.toLowerCase() === "#text"
+            && element.parentNode.nodeName.toLowerCase() === "style"
+        ) {
+            processStyleTextNode(
+                element
+                , pathExprMap
+                , context
+                , path
+            );
+        }
+        else if (element.nodeName.toLowerCase() === "#text") {
+            processTextNode(
+                element
+                , pathExprMap
+                , context
+                , path
+            );
+        }
+        else {
+            if (element.hasAttribute("repeat") && element.hasAttribute("if")) {
+                processIfAttrib(
+                    parentNamespace
+                    , element
+                    , pathExprMap
+                    , context
+                    , path
+                );
+                if (!!element.parentNode) {
+                    processRepeatAttrib(
+                        parentNamespace
+                        , element
+                        , pathExprMap
+                        , context
+                        , path
+                    );
+                }
+                else {
+                    element.removeAttribute("repeat");
+                }
+            }
+            else if (element.hasAttribute("repeat")) {
+                processRepeatAttrib(
+                    parentNamespace
+                    , element
+                    , pathExprMap
+                    , context
+                    , path
+                );
+            }
+            else if (element.hasAttribute("if")) {
+                processIfAttrib(
+                    parentNamespace
+                    , element
+                    , pathExprMap
+                    , context
+                    , path
+                );
+            }
+            else {
+                //process all non-event attributes, return the event attribute
+                //  names
+                eventAttributes = processMapAttributes(
+                    element
+                    , pathExprMap
+                    , context
+                    , path
+                );
+                //the namespace can be created after the non-event attributes
+                //  have been resolved
+                namespace = createSimpleNamespace(
+                    parentNamespace
+                    , element
+                );
+                //process any event attributes
+                if (!!eventAttributes) {
+                    processEventAttributes(
+                        namespace
+                        , element
+                        , context
+                        , eventAttributes
+                        , pathExprMap[path]
+                    );
+                }
+
+                //process the element's children
+                processChildren(
+                    namespace
+                    , Array.from(element.childNodes)
+                    , pathExprMap
+                    , context
+                    , path
+                );
+
+                //add any mixins
+                simpleMixin(
+                    element
+                    , context
+                );
+
+                //this is a work around for the proper option to be selected
+                if (element.tagName === "SELECT") {
+                    var selectedOption = element.querySelector("[selected]");
+                    if (!!selectedOption) {
+                        element.value = selectedOption.value;
+                    }
+                    else {
+                        element.value = "";
+                    }
+                }
+            }
+        }
+
+        //create the destroy method
+        createDestroyMethod(namespace, element);
     }
     /**
     * Create the context object, making data the prototype
@@ -179,119 +368,160 @@ function _SimpleTemplate(
         );
     }
     /**
-    * Processes the element including special tags, if and repeat, and
-    * processes it's shildren
     * @function
     */
-    function processElement(parentNamespace, element, data) {
-        var context = createContext(element, data)
-        , eventAttributes
-        , namespace
+    function processMapAttributes(element, pathExprMap, context, path) {
+        var eventAttributes = []
+        //get the path expression map for this element's path
+        , elPathExprMap = pathExprMap[path]
+        , attributeNames
         ;
-        //a temporary container for watchers
-        element.watchers = [];
-        //see if this is a repeat
-        if (element.nodeName === "REPEAT") {
-            processRepeatElement(
-                parentNamespace
-                , element
+
+        //if not found then skip this there aren't any bind variable attributes
+        if (!elPathExprMap) {
+            return;
+        }
+
+        //get the attribute names in a list
+        attributeNames = Object.keys(elPathExprMap.attributes);
+
+        //loop through the attribute expressions
+        for(let i = 0, l = attributeNames.length; i < l; i++) {
+            //if the attribute is an event, save that for later
+            if (attributeNames[i].indexOf("on") === 0) {
+                eventAttributes.push(attributeNames[i]);
+                continue;
+            }
+            //owtherwise process the attributes
+            processMapAttribute(
+                element
+                , attributeNames[i]
                 , context
+                , elPathExprMap.attributes[
+                    attributeNames[i]
+                ]
             );
         }
-        else if (element.nodeName === "IF") {
-            processIfElement(
-                parentNamespace
-                , element
-                , context
+
+        return eventAttributes;
+    }
+    /**
+    * @function
+    */
+    function processMapAttribute(element, attributeName, context, expressionMap) {
+        //wire up the state change handlers
+        wireAttributeMap(
+            element
+            , attributeName
+            , context
+            , expressionMap
+        );
+        //set the attribute's initial value
+        updateAttribute(
+            element
+            , attributeName
+            , context
+            , expressionMap
+        );
+    }
+    /**
+    * Adds watchers for the expressions in the expression map
+    * @function
+    */
+    function wireAttributeMap(element, attributeName, context, expressionMap) {
+        //loop through the expressions and gather all of the keys to watch
+        var keys = Object.keys(expressionMap.expressions)
+            .map(
+                function mapExpressionKeys(exprKey) {
+                    var expression = expressionMap.expressions[exprKey];
+                    return expression.variables;
+                }
+            )
+            .flat()
+        , updateFn = updateAttribute.bind(
+            null
+            , element
+            , attributeName
+            , context
+            , expressionMap
+        );
+
+        watchKeys(
+            element
+            , context
+            , keys
+            , updateFn
+        );
+    }
+    /**
+    * Handles updates to the state value for a particular attribute
+    * @function
+    */
+    function updateAttribute(element, attributeName, context, expressionMap) {
+        var attributeText = expressionMap.cleanText
+        , removeAttribute = false
+        ;
+
+        //looping backwards through the expressions, add each one to the cleanText
+        Object.keys(expressionMap.expressions)
+        .reverse()
+        .forEach(
+            function appendToText(index) {
+                var expr = expressionMap.expressions[index]
+                , result = expr.execute(
+                    context
+                    , {"quiet":true}
+                );
+                //if the result is nill and this is the only expression, remove the attribute
+                if (is_nill(result)) {
+                    if (expressionMap.expressions.length ===1) {
+                        removeAttribute = true;
+                    }
+                }
+                //if non-text value
+                else if (
+                    is_func(result)
+                    || is_objectValue(result)
+                    || is_array(result)
+                ) {
+                    if (!element.hasAttribute(attributeName)) {
+                        element.setAttribute(attributeName, cnsts.value);
+                    }
+                    element.getAttributeNode(
+                        attributeName
+                    )[cnsts.value] = result;
+                    attributeText = cnsts.value;
+                }
+                //otherwise add the result to the attribute text at the index position
+                else {
+                    attributeText =
+                        attributeText.substring(0, index)
+                        + result
+                        + attributeText.substring(index)
+                    ;
+                }
+            }
+        );
+        //remove the attribute if it had a null or undefined value only
+        if (removeAttribute) {
+            element.removeAttribute(
+                attributeName
             );
-        }
-        else if (element.nodeName === "ELSE") {
-            //remove the else
-            element.parentNode.removeChild(element);
-        }
-        else if (element.nodeName === "#text") {
-            processTextNode(element, context)
         }
         else {
-            if (element.hasAttribute("repeat") && element.hasAttribute("if")) {
-                processIfAttrib(
-                    parentNamespace
-                    , element
-                    , context
-                );
-                if (!!element.parentNode) {
-                    processRepeatAttrib(
-                        parentNamespace
-                        , element
-                        , context
-                    );
-                }
-                else {
-                    element.removeAttribute("repeat");
-                }
-            }
-            else if (element.hasAttribute("repeat")) {
-                processRepeatAttrib(
-                    parentNamespace
-                    , element
-                    , context
-                );
-            }
-            else if (element.hasAttribute("if")) {
-                processIfAttrib(
-                    parentNamespace
-                    , element
-                    , context
-                );
-            }
-            else {
-                //process all non-event attributes
-                eventAttributes = processAttributes(
-                    element
-                    , context
-                );
-                //the namespace can be created now
-                namespace = createSimpleNamespace(
-                    parentNamespace
-                    , element
-                );
-                //process any event attributes
-                processEventAttributes(
-                    namespace
-                    , element
-                    , context
-                    , eventAttributes
-                );
-
-                processChildren(
-                    namespace
-                    , Array.from(element.childNodes)
-                    , context
-                );
-                //add any mixins
-                simpleMixin(element, context);
-                //this is a work around for the proper option to be selected
-                if (element.tagName === "SELECT") {
-                    var selectedOption = element.querySelector("[selected]");
-                    if (!!selectedOption) {
-                        element.value = selectedOption.value;
-                    }
-                    else {
-                        element.value = "";
-                    }
-                }
-            }
+            element.setAttribute(
+                attributeName
+                , attributeText
+            );
         }
-
-        //create the destroy method
-        createDestroyMethod(namespace, element);
     }
+
     /**
     * Resolves the repeat expression, creats a context chain, and then processes
     * the childNodes for each iteration.
     * @function
     */
-    function processRepeatElement(parentNamespace, element, context) {
+    function processRepeatElement(parentNamespace, element, pathExprMap, context, path) {
         var expr = element.getAttribute("expr")
         , template = element.innerHTML
         ;
@@ -303,7 +533,9 @@ function _SimpleTemplate(
                 , element
                 , template
                 , expr
+                , pathExprMap
                 , context
+                , path
             );
         }
         //remove the repeat
@@ -313,38 +545,122 @@ function _SimpleTemplate(
     * Processes an element with a repeat attribute
     * @function
     */
-    function processRepeatAttrib(parentNamespace, element, context) {
+    function processRepeatAttrib(parentNamespace, element, pathExprMap, context, path) {
         var parentTag = element.parentNode.tagName
         , template
         , expr = element.getAttribute("repeat")
+        , parentPath = path.substring(
+            0
+            , path.lastIndexOf(".")
+        )
+        , elPath = path.substring(
+            path.lastIndexOf(".") + 1
+        )
+        , elIndex = elPath.substring(
+            0
+            , elPath.indexOf("]") + 1
+        )
+        , elName = elPath.substring(
+            elPath.indexOf("]") + 1
+        )
+        , newPath = `${parentPath}.${elIndex}repeat`
+        , newExprPath = `${newPath}.[0]${elName}`
         ;
         //remove the repeat attribute
         element.removeAttribute("repeat");
-        //set the innerHTML
-        template = element.outerHTML
+        //use the outerHTML as the template
+        template = element.outerHTML;
+
+        //update the path expression map to use repeat
+        Object.keys(pathExprMap)
+        .forEach(
+            function forEachPathExprMap(exprPath) {
+                if (exprPath.indexOf(path) !== -1) {
+                    pathExprMap[
+                        exprPath.replace(
+                            path
+                            , newExprPath
+                        )
+                    ] = pathExprMap[exprPath]
+                    ;
+                    delete pathExprMap[exprPath];
+                }
+            }
+        );
+
         //execute the repeat
         doRepeat(
             parentNamespace
             , parentTag
-            , element
+            , element //insert before element
             , template
             , expr
+            , pathExprMap
             , context
+            , newPath
         );
         //destroy the template element
         element.parentNode.removeChild(element);
     }
     /**
+    * Performs the repeat operation
+    * @function
+    */
+    function doRepeat(parentNamespace, parentTag, beforeEl, template, expr, pathExprMap, context, path) {
+        //evaluate the expression and get an iterator
+        var repeatContext
+        , mockParentElement = createElement(parentTag)
+        , iter = simpleExpression(expr.replace(TAG_PATT, "$1"), context).iterator
+        , nodes
+        , repeatGroups = []
+        ;
+        //if this didn't evaluate to an iterator then skip
+        if (!iter.next) {
+            return;
+        }
+        //iterate through the repeat expression
+        while(!is_nill(repeatContext = iter.next())) {
+            //use the mock parent to generate elements from the template
+            mockParentElement.innerHTML = template;
+            //move the child nodes to the real parent
+            nodes = Array.from(mockParentElement.childNodes);
+            insertNodes(
+                beforeEl
+                , mockParentElement.childNodes
+            );
+            //record the resulting nodes and their context
+            repeatGroups.push(
+                {
+                    "nodes": nodes
+                    , "context": repeatContext
+                }
+            );
+        }
+        //process each repeat group
+        repeatGroups.forEach(
+            function forEachRepeatGroup(repeatGroup) {
+                processChildren(
+                    parentNamespace
+                    , repeatGroup.nodes
+                    , pathExprMap
+                    , repeatGroup.context
+                    , path
+                );
+            }
+        );
+    }
+
+    /**
     * Resolves the if expression, if true then inserts the if children
     * @function
     */
-    function processIfElement(parentNamespace, element, context) {
+    function processIfElement(parentNamespace, element, pathExprMap, context, path) {
         var expr = element.getAttribute("expr")
         , elseEl = element.nextElementSibling
         , elseNodes
         ;
 
-        if (!!elseEl && elseEl.nodeName === "ELSE") {
+        if (!!elseEl && elseEl.nodeName.toLowerCase() === "else") {
             elseNodes = elseEl.childNodes;
         }
 
@@ -352,9 +668,11 @@ function _SimpleTemplate(
             parentNamespace
             , element
             , expr
+            , pathExprMap
             , element.childNodes
             , elseNodes
             , context
+            , path
         );
 
         //remove the if
@@ -364,7 +682,7 @@ function _SimpleTemplate(
     * Evaluates the if expression found in the if attribute
     * @function
     */
-    function processIfAttrib(parentNamespace, element, context) {
+    function processIfAttrib(parentNamespace, element, pathExprMap, context, path) {
         var expr = element.getAttribute("if")
         , elseEl = element.nextElementSibling
         , pass
@@ -385,9 +703,11 @@ function _SimpleTemplate(
             parentNamespace
             , element
             , expr
+            , pathExprMap
             , [element]
             , !!elseEl && [elseEl]
             , context
+            , path
         );
 
         if(!pass) {
@@ -403,7 +723,7 @@ function _SimpleTemplate(
     * all of it's children
     * @function
     */
-    function doIf(parentNamespace, element, expr, ifNodes, elseNodes, context) {
+    function doIf(parentNamespace, element, expr, pathExprMap, ifNodes, elseNodes, context, path) {
         var pass = !!simpleExpression(
             expr.replace(TAG_PATT, "$1")
             , context
@@ -420,12 +740,14 @@ function _SimpleTemplate(
 
         //process the nodes
         if (!!nodes) {
-            nodes.forEach(function forEachNode(node) {
+            nodes.forEach(function forEachNode(node, index) {
                 if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
                     processElement(
                         parentNamespace
                         , node
+                        , {}
                         , context
+                        , `${path}.[${index}]${node.nodeName.toLowerCase()}`
                     );
                 }
             });
@@ -437,7 +759,7 @@ function _SimpleTemplate(
     * Processes a text node
     * @function
     */
-    function processTextNode(textNode, context) {
+    function processTextNode(textNode, pathExprMap, context, path) {
         //get the text node's value
         var value =  textNode.nodeValue.replace(TRIM_PATT, "$1")
         //process the value and see if we have any keys
@@ -458,10 +780,10 @@ function _SimpleTemplate(
             }
 
             //set the node value to the result
-            el.innerHTML = result.value;
-                //.replace(LN_END_PATT, "<br>")
-                //.replace(SPC_PATT, "&nbsp;")
-                //.replace(TAB_PATT, "&#9;");
+            el.innerHTML = result.value
+                .replace(LN_END_PATT, "<br>")
+                .replace(SPC_PATT, "&nbsp;")
+                .replace(TAB_PATT, "&#9;");
 
             //add the watchers
             if (result.keys.length > 0) {
@@ -483,190 +805,70 @@ function _SimpleTemplate(
         }
     }
     /**
-    * Processes each attribute of the element
+    * Processes a text node inside a style tag
     * @function
     */
-    function processAttributes(element, context) {
-        if (!!element.attributes) {
-            var eventAttributes = {}
-            , attribs = Array.prototype.slice.apply(element.attributes)
-            ;
-
-            attribs.forEach(function forEachAttr(attr) {
-                if (processAttribute(element, context, attr)) {
-                    eventAttributes[attr.name] = attr.value;
-                }
-            });
-            //remove any on attributes that we added handlers for
-            Object.keys(eventAttributes)
-            .forEach(function forEachRem(attribName) {
-                element.removeAttribute(attribName);
-            });
-
-            return eventAttributes;
-        }
-    }
-    /**
-    * Processes the attribute, evaluating any expressions, adding any watch
-    * handlers, and 2 way binding for input elements if the attribute is bind
-    * @function
-    */
-    function processAttribute(element, context, attr) {
-        //check for on{event} attributes
-        if (attr.name.indexOf("on") === 0) {
-            //return true to notify that the attribute should be removed
-            return true;
-        }
-        //process the attrib value and see if we have keys
-        var expr = attr.value
-        , name = attr.name
-        , result = processValue(attr.value, context);
-
-        //add the watch handler for each key
-        if(result.keys.length > 0) {
-            watchKeys(
-                element
+    function processStyleTextNode(textNode, pathExprMap, context, path) {
+        var newStyleElement =
+            simpleStyle(
+                textNode.nodeValue.replace(TRIM_PATT, "$1")
                 , context
-                , result.keys
-                , function watchHandler(key, value) {
-                    setAttribute(
-                        processValue(
-                            expr
-                            , context
-                        )
-                    );
-                }
-            );
-        }
-
-        setAttribute(result);
-
-        function setAttribute(result) {
-            var value = result.value;
-            //if the values array has only one, then use that because it will
-            // have the actual object or function rather than a string representation
-            if (!result.hybrid && result.values.length === 1) {
-                value = result.values[0];
-            }
-            if (is_object(value) || is_func(value) || is_array(value)) {
-                element.getAttributeNode(attr.name)[cnsts.value] = value;
-                element.setAttribute(name, "$value");
-            }
-            else if (!is_nill(value)) {
-                element.setAttribute(name, value);
-            }
-            else {
-                element.removeAttribute(name);
-            }
-        }
-    }
-    /**
-    * @function
-    */
-    function processEventAttributes(namespace, element, context, eventAttributes) {
-        element.listenedEvents = [];
-
-        Object.keys(eventAttributes)
-        .forEach(
-            function forEachEventAttribute(eventAttribName) {
-                addEventHandler(
-                    namespace
-                    , element
-                    , context
-                    , eventAttribName
-                    , eventAttributes[eventAttribName]
-                );
-            }
+            )
+        , parentStyleElement = textNode.parentNode
+        ;
+        parentStyleElement.innerHTML = "";
+        parentStyleElement.appendChild(
+            newStyleElement.childNodes[0]
         );
     }
     /**
-    * Adds an event handler to the element using the attribute name for the
-    * event and evaluates the attribute value for the handler function.
     * @function
     */
-    function addEventHandler(namespace, element, context, eventAttribName, eventAttribValue) {
-        //reset the regEx
-        TAG_PATT.lastIndex = 0;
-        //the event name is the attribute name minus the on
-        var name = eventAttribName.substring(2)
-        //extract the expression
-        , expr = TAG_PATT.exec(
-            eventAttribValue
-        )
-        , func
-        , eventNamespace = `${namespace}.${name}`
-        ;
-        //if there is a match then resove the expression, should resolve a function
-        if (!!expr) {
-            func = simpleExpression(expr[1], context).result;
-        }
-        //if func is a function then create the handler
-        if (is_func(func)) {
-            //put the user event manager in the middle
-            userEventManager.on(
-                eventNamespace
-                , func
-            );
-            element.listenedEvents.push(
-                eventNamespace
-            );
-            //if the event is not one of the handled ones then add a listener
-            if (cnsts.handledEvents.indexOf(name) === -1) {
-                element.addEventListener(
-                    name
-                    , function handleEvent(event) {
-                        userEventManager.handleExternalEvent(
-                            namespace
-                            , event
+    function processEventAttributes(namespace, element, context, eventAttributes, expressionMap) {
+        element.listenedEvents = [];
+
+        eventAttributes
+        .forEach(
+            function forEachEventAttribute(eventAttribName) {
+                //get the expression map for this attribute
+                var eventAttribExprMap =
+                    expressionMap.attributes[eventAttribName]
+                //there should only be one expression
+                , exprKey = Object.keys(eventAttribExprMap.expressions)[0]
+                , eventHandlerExpr = eventAttribExprMap.expressions[exprKey]
+                , eventHandler = eventHandlerExpr.execute(
+                    context
+                )
+                , eventName = eventAttribName.substring(2)
+                , eventNamespace = `${namespace}.${eventName}`
+                ;
+                //add the handler
+                if (is_func(eventHandler)) {
+                    //put the user event manager in the middle
+                    userEventManager.on(
+                        eventNamespace
+                        , eventHandler
+                    );
+                    element.listenedEvents.push(
+                        eventNamespace
+                    );
+                    //if the event is not one of the handled ones then add a listener
+                    if (cnsts.handledEvents.indexOf(eventName) === -1) {
+                        element.addEventListener(
+                            eventName
+                            , function handleEvent(event) {
+                                userEventManager.handleExternalEvent(
+                                    eventNamespace
+                                    , event
+                                );
+                            }
                         );
                     }
-                );
-            }
-        }
-    }
-    /**
-    * Performs the repeat operation
-    * @function
-    */
-    function doRepeat(parentNamespace, parentTag, beforeEl, template, expr, context) {
-        //evaluate the expression and get an iterator
-        var repeatContext
-        , mockParentElement = createElement(parentTag)
-        , iter = simpleExpression(expr.replace(TAG_PATT, "$1"), context).iterator
-        , nodes
-        , repeatGroups = []
-        ;
-        //make sure this evalutated to an iterator
-        if (!!iter.next) {
-            while(!is_nill(repeatContext = iter.next())) {
-                //use the mock parent to generate elements from the template
-                mockParentElement.innerHTML = template;
-                //move the child nodes to the real parent
-                nodes = Array.from(mockParentElement.childNodes);
-                insertNodes(
-                    beforeEl
-                    , mockParentElement.childNodes
-                );
-                //record the resulting nodes and their context
-                repeatGroups.push(
-                    {
-                        "nodes": nodes
-                        , "context": repeatContext
-                    }
-                );
-            }
-            //process each repeat group
-            repeatGroups.forEach(
-                function forEachRepeatGroup(repeatGroup) {
-                    processChildren(
-                        parentNamespace
-                        , repeatGroup.nodes
-                        , repeatGroup.context
-                    );
                 }
-            );
-        }
+            }
+        );
     }
+
     /**
     * Inserts the nodes before the beforeEl
     * @function
@@ -767,19 +969,24 @@ function _SimpleTemplate(
     * Processes each childNode of the element
     * @function
     */
-    function processChildren(parentNamespace, childNodes, context) {
+    function processChildren(parentNamespace, childNodes, pathExprMap, context, path) {
         var node = childNodes[0]
         , sibling
+        , index = 0
         ;
         if (!!node) {
             do {
                 sibling = node.nextSibling;
                 if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
+                    //process the child element
                     processElement(
                         parentNamespace
                         , node
+                        , pathExprMap
                         , context
+                        , `${path}.[${index}]${node.nodeName.toLowerCase()}`
                     );
+                    index++;
                 }
                 else if (!!node.parentNode) {
                     node.parentNode.removeChild(node);
@@ -846,25 +1053,59 @@ function _SimpleTemplate(
             tag = null;
         }
         //template could be an array
-        if(is_array(template)) {
+        if (is_array(template)) {
             template = template.join("\n");
         }
 
-        var element = convertHtml(tag, template);
+        var element
+        , pathExpressionMap
+        , cleanMarkup
+        , childIndex = 0
+        , childNode
+        , childPath
+        ;
+
+        //parse the markup and destructure the result
+        (
+            {pathExpressionMap, cleanMarkup} = xmlBindVariableParser(
+                template
+                , data
+            )
+        );
+
+        //create the DOM for the clean markup
+        element = convertHtml(
+            tag
+            , cleanMarkup
+        );
 
         //if there is a self child tag then apply it's attributes to the tag
-        if (!!element.children[0] && element.children[0].tagName === "SELF") {
+        if (!!element.children[0] && element.children[0].tagName.toLowerCase() === "self") {
             processSelfTag(
                 element
+                , pathExpressionMap
                 , data
             );
         }
-        //process the element
-        process(
+        //process each child of the element; the element is either an element
+        //  passed using the tag parameter, or a temp element holding the
+        //  template contents
+        processChildren(
             viewNamespace
-            , element
+            , Array.from(element.childNodes)
+            , pathExpressionMap
             , data
+            , "$"
         );
+
+        //ensure the element passed as tag has a destroy function
+        if (element === tag && !element.hasOwnProperty("$destroy")) {
+            //create the destroy method
+            createDestroyMethod(
+                "$"
+                , element
+            );
+        }
 
         return element;
     };

@@ -3,10 +3,10 @@
 * Uses the parent namespace, the node tagName and id to create a local namespace representative of the node
 * @function
 */
-function CreateSimpleNamespace(parentNamespace, node) {
+function CreateSimpleNamespace(parentNamespace, node, options = {}) {
     //if this is the view element, don't add anything
     if (!!node.hasAttribute && node.hasAttribute("view-ns")) {
-        return parentNamespace;
+        return node.getAttribute("view-ns");
     }
     var ordinal = findChildOrdinal(
         node
@@ -17,7 +17,7 @@ function CreateSimpleNamespace(parentNamespace, node) {
         : `${parentNamespace}.${nodeName}`
     ;
     //add the id if there is one
-    if (!!node.id) {
+    if (!!node.id && options.noid !== true) {
         path+= `#${node.id}`;
     }
 

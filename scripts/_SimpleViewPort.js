@@ -34,7 +34,7 @@ function _SimpleViewPort(
         , attributes
     ) {
         try {
-            var template = "<main${attributes}></main>"
+            var template = "<main view-ns=\"$.main\"${attributes}></main>"
             , attributeStr = ""
             , loaded = false
             , element
@@ -83,7 +83,7 @@ function _SimpleViewPort(
 
             //create the template element
             element = simpleTemplate(
-                "$.main"
+                "$"
                 , template
                 , context
             ).children[0];

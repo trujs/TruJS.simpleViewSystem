@@ -254,16 +254,26 @@ function _SimpleStyle(
         template = compileScss(template);
 
         //create the style element
-        var style = createElement("style")
+        var styleEl = createElement("style")
         //get the array of watchers
-        , watchers = getWatchers(template, context)
+        , watchers = getWatchers(
+            template
+            , context
+        )
         ;
 
         //add $destroy
-        addDestroy(style, watchers);
+        addDestroy(
+            styleEl
+            , watchers
+        );
 
         //create the css
-        updateElement(style, template, context);
+        updateElement(
+            styleEl
+            , template
+            , context
+        );
 
         //add the watchers
         watchers.forEach(function (watcher) {
@@ -271,11 +281,15 @@ function _SimpleStyle(
             watcher.parent[cnsts.watch](
                 watcher.key
                 , function watch() {
-                    updateElement(style, template, context);
+                    updateElement(
+                        styleEl
+                        , template
+                        , context
+                    );
                 }
             );
         });
 
-        return style;
+        return styleEl;
     };
 }

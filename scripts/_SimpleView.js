@@ -17,6 +17,7 @@ function _SimpleView(
     , is_nill
     , is_string
     , is_error
+    , is_promise
     , utils_func_async
     , utils_reference
     , utils_ensure
@@ -805,6 +806,20 @@ function _SimpleView(
                 , view.attributes
                 , state
             );
+
+            //if the controller returns a promise, wait for tha to resolve
+            if (is_promise(watchers)) {
+                return watchers
+                .then(
+                    function thenCreateWatchers() {
+                        createWatchers(
+                            view
+                            , watchers
+                        );
+                        return promise.resolve(view);
+                    }
+                )
+            }
 
             //create the watchers
             createWatchers(view, watchers);
