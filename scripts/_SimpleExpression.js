@@ -30,6 +30,7 @@ function _SimpleExpression(
     , is_object
     , is_func
     , utils_reference
+    , utils_getType
 ) {
     var COND_PATT = /^([\-A-Za-z0-9$.,()'\[\]_]+) (is|isnot|isin|!isin|==|>|<|!=|>=|<=|!==|===) ([\-A-Za-z0-9$.,()'\[\]_\ "`]+|\[[a-z]+\]|"[^"]+"|'[^']+'|`[^`]+`)$/i
     , ITER_PATT = /^([A-Za-z0-9$_]+)(?:, ?([A-Za-z0-9$_]+))?(?:, ?([A-Za-z0-9$_]+))? (in|for) ([A-Za-z0-9.()'\[\],$_]+)(?: sort ([A-z0-9$._\[\]]+)(?: (desc|asc))?)?(?: filter (.+))?$/i
@@ -241,7 +242,7 @@ function _SimpleExpression(
 
         //if the operator equals "is" then we'll set sideA to getType
         if (op === "is" || op === "isnot") {
-            sideA = getType(sideA);
+            sideA = utils_getType(sideA);
             if (op === "isnot") {
                 op = "!=";
             }
