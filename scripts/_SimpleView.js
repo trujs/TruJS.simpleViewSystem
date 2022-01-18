@@ -811,14 +811,14 @@ function _SimpleView(
             if (is_promise(watchers)) {
                 return watchers
                 .then(
-                    function thenCreateWatchers() {
+                    function thenCreateWatchers(resolvedWatchers) {
                         createWatchers(
                             view
-                            , watchers
+                            , resolvedWatchers
                         );
                         return promise.resolve(view);
                     }
-                )
+                );
             }
 
             //create the watchers
