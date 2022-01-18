@@ -12,6 +12,7 @@
     }]
     , "utils": [{
         "reference": [":PunyJS.core.object.Reference"]
+        , "getType": [":PunyJS.core.utils.GetType"]
     }]
 
     , "classHelper": [":PunyJS.core.dom._ClassHelper", []]
