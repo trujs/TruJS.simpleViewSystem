@@ -54,7 +54,7 @@ function _SimpleViewPort(
             utils_apply(
                 views_main_state
                 , state.main
-            )
+            );
 
             if (!context) {
                 context = {};
