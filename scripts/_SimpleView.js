@@ -5,7 +5,7 @@
 */
 function _SimpleView(
     promise
-    , $resolve
+    , resolve$
     , simpleTemplate
     , simpleErrors
     , simpleStyle
@@ -410,7 +410,7 @@ function _SimpleView(
             return promise.resolve(null);
         }
         //resolve the controller for ${name}
-        return $resolve(
+        return resolve$(
             [
                `.views.${name}.controller`
                , {
@@ -456,7 +456,7 @@ function _SimpleView(
                 return promise.resolve(childState);
             }
             //resolve the state from the ioc system
-            return $resolve(
+            return resolve$(
                 [
                     `.views.${id}.state`
                     , {"missingAction":"none"}
