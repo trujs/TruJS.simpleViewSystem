@@ -228,3 +228,53 @@ function xmlBindVariableParserTest3(
         }
     );
 }
+/**
+* @test
+*   @title TruJS.simpleViewSystem.scripts._XMLBindVariableParser: regression, quote being removed from text and expressions
+*/
+function xmlBindVariableParserTest4(
+    controller
+    , mock_callback
+) {
+    var xmlBindVariableParser, mockXml, pathExpressionMap, cleanMarkup;
+
+    arrange(
+        async function arrangeFn() {
+            xmlBindVariableParser = await controller(
+                [
+                    ":TruJS.simpleViewSystem.scripts._XMLBindVariableParser"
+                    , []
+                ]
+            );
+
+            mockXml = `<p>He exclaimed {:getResponse(dataId, "haza"):}</p>`;
+        }
+    );
+
+    act(
+        function actFn() {
+            //destructure the result
+            (
+                {pathExpressionMap, cleanMarkup} = xmlBindVariableParser(
+                    mockXml
+                )
+            );
+        }
+    );
+
+    assert(
+        function assertFn(test) {
+
+            test("The cleanMarkup should be")
+            .value(cleanMarkup)
+            .equals(`<p>He exclaimed {:getResponse(dataId, "haza"):}</p>`)
+            ;
+
+            test("The path expression map should be")
+            .value(pathExpressionMap)
+            .stringify()
+            .equals(`{"$.[0]p.[0]#text":{"type":"text","expressions":{"13":{"variables":["getResponse","dataId"],"type":"execution"}},"cleanText":"He exclaimed "}}`)
+            ;
+        }
+    );
+}

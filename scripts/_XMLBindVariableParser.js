@@ -129,24 +129,22 @@ function _XMLBindVariableParser(
                     curText = "";
                 }
                 //otherwise
-                else {
-                    //pocess any text gathered to this point
-                    //if we have curtext this is a text token
-                    if (!!curText) {
-                        //differentiate between a bind var in a tag or just in text
-                        if (openBeginTag || openEndTag) {
-                            tokens.push(
-                                `(${line},${c - curText.length})TAGTEXT:${curText}`
-                            );
-                        }
-                        else {
-                            tokens.push(
-                                `(${line},${c - curText.length})TEXT:${curText}`
-                            );
-                        }
-                        //reset curtext for the next run
-                        curText = "";
+                //process any text gathered to this point
+                //if we have curtext this is a text token
+                else if (!!curText) {
+                    //differentiate between a bind var in a tag or just in text
+                    if (openBeginTag || openEndTag) {
+                        tokens.push(
+                            `(${line},${c - curText.length})TAGTEXT:${curText}`
+                        );
                     }
+                    else {
+                        tokens.push(
+                            `(${line},${c - curText.length})TEXT:${curText}`
+                        );
+                    }
+                    //reset curtext for the next run
+                    curText = "";
                 }
                 //differentiate between a bind var in a tag or just in text
                 if (openBeginTag || openEndTag) {
@@ -214,22 +212,31 @@ function _XMLBindVariableParser(
                     );
                     //reset curtext for the next run
                     curText = "";
-                    stringChar = curChar;
                 }
+                else {
+                    curText+= curChar;
+                }
+
+                stringChar = curChar;
             }
             //if we are ending our string literal
             else if (!!stringChar && curChar === stringChar) {
                 stringChar = "";
-                //add the string literal token
-                tokens.push(
-                    `(${line},${c - curText.length})TAGTEXT:${curText}`
-                );
-                //add the string end token
-                tokens.push(
-                    `(${line},${c})TERM:${curChar}`
-                );
-                //clear the curText for the next round
-                curText = "";
+                if (openBeginTag || openEndTag) {
+                    //add the string literal token
+                    tokens.push(
+                        `(${line},${c - curText.length})TAGTEXT:${curText}`
+                    );
+                    //add the string end token
+                    tokens.push(
+                        `(${line},${c})TERM:${curChar}`
+                    );
+                    //clear the curText for the next round
+                    curText = "";
+                }
+                else {
+                    curText+= curChar;
+                }
             }
             //if we are in a string literal
             else if (!!stringChar) {
@@ -264,6 +271,10 @@ function _XMLBindVariableParser(
             }
             //if we are in a comment
             else if (!!inComment) {
+                curText+= curChar;
+            }
+            //see if we're in a bind expression
+            else if (inBindExpression) {
                 curText+= curChar;
             }
             //check for an opening begin tag
