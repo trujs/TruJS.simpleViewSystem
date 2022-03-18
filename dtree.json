@@ -9,6 +9,7 @@
         , "array": [":PunyJS.core.is.Array"]
         , "func": [":PunyJS.core.is.Func"]
         , "promise": [":PunyJS.core.is.Promise"]
+        , "upper": [":PunyJS.core.is.Upper"]
     }]
     , "utils": [{
         "reference": [":PunyJS.core.object.Reference"]

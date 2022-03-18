@@ -31,6 +31,7 @@ function _SimpleTemplate(
     , is_func
     , is_nill
     , is_string
+    , is_upper
     , utils_reference
     , errors
 ) {
@@ -113,11 +114,13 @@ function _SimpleTemplate(
     *
     * @function
     */
-    function processSelfTag(element, pathExprMap, context) {
+    function processSelfTag(viewNamespace, element, pathExprMap, context) {
         var self = element.children[0]
         , attrs = Array.from(self.attributes)
         , children = Array.from(self.childNodes)
         , removeList = []
+        , eventAttributes
+        , path = "$.[0]self"
         ;
         //loop through the self tag attributes (non-expression attributes)
         //  and add/append them to the element
@@ -130,12 +133,22 @@ function _SimpleTemplate(
             }
         );
         //add the mapped expressions to the element
-        processMapAttributes(
+        eventAttributes = processMapAttributes(
             element
             , pathExprMap
             , context
-            , "$.[0]self"
+            , path
         );
+        //process any event attributes
+        if (!is_empty(eventAttributes)) {
+            processEventAttributes(
+                `${viewNamespace}`
+                , element
+                , context
+                , eventAttributes
+                , pathExprMap[path]
+            );
+        }
         //update the path map to remove the [0]self from each
         Object.keys(pathExprMap)
         .forEach(
@@ -298,7 +311,7 @@ function _SimpleTemplate(
                     , element
                 );
                 //process any event attributes
-                if (!!eventAttributes) {
+                if (!is_empty(eventAttributes)) {
                     processEventAttributes(
                         namespace
                         , element
@@ -728,7 +741,9 @@ function _SimpleTemplate(
             expr.replace(TAG_PATT, "$1")
             , context
         ).result
-        , nodes;
+        , nodes
+        , childName
+        ;
 
         //if pass then use the if children
         if (pass) {
@@ -742,12 +757,16 @@ function _SimpleTemplate(
         if (!!nodes) {
             nodes.forEach(function forEachNode(node, index) {
                 if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
+                    childName = is_upper(node.nodeName)
+                        ? node.nodeName.toLowerCase()
+                        : node.nodeName
+                    ;
                     processElement(
                         parentNamespace
                         , node
                         , {}
                         , context
-                        , `${path}.[${index}]${node.nodeName.toLowerCase()}`
+                        , `${path}.[${index}]${childName}`
                     );
                 }
             });
@@ -830,6 +849,7 @@ function _SimpleTemplate(
         eventAttributes
         .forEach(
             function forEachEventAttribute(eventAttribName) {
+
                 //get the expression map for this attribute
                 var eventAttribExprMap =
                     expressionMap.attributes[eventAttribName]
@@ -973,18 +993,23 @@ function _SimpleTemplate(
         var node = childNodes[0]
         , sibling
         , index = 0
+        , childName
         ;
         if (!!node) {
             do {
                 sibling = node.nextSibling;
                 if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
+                    childName = is_upper(node.nodeName)
+                        ? node.nodeName.toLowerCase()
+                        : node.nodeName
+                    ;
                     //process the child element
                     processElement(
                         parentNamespace
                         , node
                         , pathExprMap
                         , context
-                        , `${path}.[${index}]${node.nodeName.toLowerCase()}`
+                        , `${path}.[${index}]${childName}`
                     );
                     index++;
                 }
@@ -1082,7 +1107,8 @@ function _SimpleTemplate(
         //if there is a self child tag then apply it's attributes to the tag
         if (!!element.children[0] && element.children[0].tagName.toLowerCase() === "self") {
             processSelfTag(
-                element
+                viewNamespace
+                , element
                 , pathExpressionMap
                 , data
             );

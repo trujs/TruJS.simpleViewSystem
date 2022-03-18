@@ -18,6 +18,7 @@ function _SimpleView(
     , is_string
     , is_error
     , is_promise
+    , is_upper
     , utils_func_async
     , utils_reference
     , utils_ensure
@@ -724,7 +725,7 @@ function _SimpleView(
                 var cntxtKey = attrKey.replace(/-/g, "")
                 , value = attributes[attrKey];
                 attrStr+= " " +
-                    attrKey.toLowerCase() +
+                    attrKey +
                     "=\"" + value + "\""
                 ;
             });
@@ -766,12 +767,12 @@ function _SimpleView(
             }
             , resolved = false
             , watchers;
-
             //add the view-ns attribute
             element.setAttribute(
                 'view-ns'
                 , view.namespace
             );
+            view.attributes.viewNs = view.namespace;
             //create the render function with the view token
             view.render = renderView.bind(
                 null
@@ -835,9 +836,9 @@ function _SimpleView(
     * @function
     */
     function getViewNamespace(element, parentNamespace) {
-        var viewName = element.tagName
-            .toLowerCase()
-            .replace(/-/g, ".")
+        var viewName = is_upper(element.nodeName)
+            ? element.nodeName.toLowerCase()
+            : element.nodeName
         ;
         return `${parentNamespace}.${viewName}`;
     }
