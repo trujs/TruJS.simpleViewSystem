@@ -53,7 +53,11 @@ function _SimpleView(
     * @function
     */
     function getElementName(element) {
-        return element.nodeName.toLowerCase().replace(LD_PATH, ".");
+        var nodeName = element.nodeName;
+        if (is_upper(nodeName)) {
+            nodeName = nodeName.toLowerCase();
+        }
+        return nodeName.replace(LD_PATH, ".");
     }
     /**
     * Creates the state context object, starting with adding the state as the
@@ -273,7 +277,9 @@ function _SimpleView(
             return ;
         }
         var tagName = getElementName(childEl)
-        , ctrlName = tagName.replace(/-/g, ".")
+        , ctrlName = childEl.hasAttribute("view-controller")
+            ? childEl.getAttribute("view-controller")
+            : getElementName(childEl).replace(/-/g, ".")
         ;
         //try to find a controller
         return getController(
@@ -310,7 +316,9 @@ function _SimpleView(
     function processChildView(parentNamespace, tagName, parentState, childEl, controller) {
         try {
             var childState, isStateless
-            , id = childEl.id || generateId(tagName)
+            , stateId = childEl.hasAttribute("view-state-id")
+                ? childEl.getAttribute("view-state-id")
+                : childEl.id || generateId(tagName)
             , proc = promise.resolve()
             ;
             //see if the controller is stateless
@@ -327,7 +335,7 @@ function _SimpleView(
             //get the state
             if (!isStateless) {
                 proc = getChildState(
-                    id
+                    stateId
                     , parentState
                 );
             }
@@ -343,8 +351,11 @@ function _SimpleView(
                         );
                     }
                     else {
-                        //replace dots with underscores
-                        childEl.id = id.replace(/[.]/g, "-");
+                        //replace dots with dashes
+                        if (!!childEl.id) {
+                            childEl.id = childEl.id.replace(/[.]/g, "-");
+                        }
+
                         //create the view
                         return SimpleView(
                             childEl
@@ -446,11 +457,11 @@ function _SimpleView(
     * Gets the property from the state that matches the id
     * @function
     */
-    function getChildState(id, state) {
+    function getChildState(stateId, state) {
         try {
             //see if the view state is already on the state manager
             var childState = utils_lookup(
-                id
+                stateId
                 , state
             );
             if (!!childState) {
@@ -459,17 +470,52 @@ function _SimpleView(
             //resolve the state from the ioc system
             return resolve$(
                 [
-                    `.views.${id}.state`
+                    `.views.${stateId}.state`
                     , {"missingAction":"none"}
                 ]
             )
             //then add this to the parent state
             .then(
                 function thenAddtoParent(childState) {
-                    state[id] = childState;
-                    return promise.resolve(state[id]);
+                    return addStateByPath(
+                        state
+                        , stateId
+                        , child
+                    );
                 }
-            )
+            );
+        }
+        catch(ex) {
+            return promise.reject(ex);
+        }
+    }
+    /**
+    * Ensures the path exists on the state and then add the child state to that path
+    * @function
+    */
+    function addStateByPath(state, stateId, child) {
+        try {
+            //if there isn't a child state from the resolve then error
+            if (!child) {
+                throw new Error(
+                    `${simpleErrors.missingChildState} (${stateId})`
+                );
+            }
+            //the state id could be a multi secment path,
+            //  ensure the path exists
+            utils_ensure(
+                stateId
+                , state
+            );
+            //get a reference to the parent and update
+            var ref = utils_reference(
+                stateId
+                , state
+            );
+            //add the child state to the path
+            ref.parent[ref.index] = child;
+
+            return promise.resolve(ref.parent[ref.index]);
         }
         catch(ex) {
             return promise.reject(ex);
@@ -556,7 +602,7 @@ function _SimpleView(
                     view.state[cnsts.watch](
                         watcher.path
                         , function stateNetWrap(event, key) {
-                            watcher.handler(
+                            return watcher.handler(
                                 key
                                 , event.value
                                 , event
@@ -839,8 +885,16 @@ function _SimpleView(
         var viewName = is_upper(element.nodeName)
             ? element.nodeName.toLowerCase()
             : element.nodeName
+        //start with the view state id so we can build on the state path
+        , stateId = element.hasAttribute("view-state-id")
+            ? element.getAttribute("view-state-id")
+            //for backwards compatibility, the id represents the state id
+            : element.hasAttribute("id")
+                ? element.getAttribute("id")
+                : viewName
         ;
-        return `${parentNamespace}.${viewName}`;
+
+        return `${parentNamespace}.${stateId}`;
     }
 
     /**
