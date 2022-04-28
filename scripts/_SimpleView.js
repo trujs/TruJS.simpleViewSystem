@@ -708,11 +708,7 @@ function _SimpleView(
                 , attributes
             )
             //determine the view namespace
-            , viewNamespace = getViewNamespace(
-                {
-                    "tagName": tagName
-                }
-            )
+            , viewNamespace = parentView.namespace
             ;
             //if there is a selector use it to get the parent element
             if (is_string(selector) && !is_empty(selector)) {
