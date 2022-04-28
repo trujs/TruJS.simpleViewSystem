@@ -491,6 +491,20 @@ function _SimpleTemplate(
                         removeAttribute = true;
                     }
                 }
+                //if the expression is an object type, choose the key for
+                //  the first true value
+                else if (expr.type === "object") {
+                    result =
+                    Object.keys(result)
+                    .find(
+                        function chooseKey(key) {
+                            return result[key];
+                        }
+                    );
+                    if (is_nill(result)) {
+                        removeAttribute = true;
+                    }
+                }
                 //if non-text value
                 else if (
                     is_func(result)
@@ -849,7 +863,6 @@ function _SimpleTemplate(
         eventAttributes
         .forEach(
             function forEachEventAttribute(eventAttribName) {
-
                 //get the expression map for this attribute
                 var eventAttribExprMap =
                     expressionMap.attributes[eventAttribName]
