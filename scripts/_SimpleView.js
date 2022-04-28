@@ -480,7 +480,7 @@ function _SimpleView(
                     return addStateByPath(
                         state
                         , stateId
-                        , child
+                        , childState
                     );
                 }
             );
@@ -493,10 +493,10 @@ function _SimpleView(
     * Ensures the path exists on the state and then add the child state to that path
     * @function
     */
-    function addStateByPath(state, stateId, child) {
+    function addStateByPath(parentState, stateId, childState) {
         try {
             //if there isn't a child state from the resolve then error
-            if (!child) {
+            if (!childState) {
                 throw new Error(
                     `${simpleErrors.missingChildState} (${stateId})`
                 );
@@ -505,15 +505,15 @@ function _SimpleView(
             //  ensure the path exists
             utils_ensure(
                 stateId
-                , state
+                , parentState
             );
             //get a reference to the parent and update
             var ref = utils_reference(
                 stateId
-                , state
+                , parentState
             );
             //add the child state to the path
-            ref.parent[ref.index] = child;
+            ref.parent[ref.index] = childState;
 
             return promise.resolve(ref.parent[ref.index]);
         }
