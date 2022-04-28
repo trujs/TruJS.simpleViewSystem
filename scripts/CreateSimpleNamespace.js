@@ -4,10 +4,18 @@
 * @function
 */
 function CreateSimpleNamespace(parentNamespace, node, options = {}) {
-    //if this is the view element, don't add anything
-    if (!!node.hasAttribute && node.hasAttribute("view-ns")) {
-        return node.getAttribute("view-ns");
+
+    if (!!node.hasAttribute) {
+        //if this is the view element, don't add anything
+        if (node.hasAttribute("view-ns")) {
+            return node.getAttribute("view-ns");
+        }
+        //if there is a view-state-id use that
+        if (node.hasAttribute("view-state-id")) {
+            return `${parentNamespace}.${node.getAttribute("view-state-id")}`;
+        }
     }
+
     var ordinal = findChildOrdinal(
         node
     )
