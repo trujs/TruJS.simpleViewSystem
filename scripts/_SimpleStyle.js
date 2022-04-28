@@ -16,6 +16,8 @@ function _SimpleStyle(
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^(?:[\r\n \t]*)((?:(?:.)|[\r\n \t])*?)(?:[\r\n \t]*)$/
     , LINE_PATT = /(\r?\n)/g
+    , EMPTY_STYLE_PATT = /(?:^|\n\r?)[ \t]*[a-zA-z0-9-_]+[:][ ]?;/g
+    , STRING_PERC_PATT = /(?:'|")([0-9]{1,3}[%])(?:'|")/g
     , cnsts = {
         "destroy": "$destroy"
         , "watch": "$addListener"
@@ -149,6 +151,11 @@ function _SimpleStyle(
     function convertBlockToCss(block) {
         var selector;
 
+        //if there isn't anything in the body we don't need to add it
+        if (block.body === "\n") {
+            return "";
+        }
+        //loop through the selectors and combine them into a single selector
         block.selectors.forEach(function forEachSel(sel) {
             if (!!selector) {
                 selector =
@@ -210,7 +217,7 @@ function _SimpleStyle(
     * @function
     */
     function processTemplate(template, context) {
-        return template.replace(TAG_PATT, function (tag, key) {
+        var cssMarkup = template.replace(TAG_PATT, function (tag, key) {
             var ref = utils_reference(
                 key
                 , context
@@ -224,6 +231,18 @@ function _SimpleStyle(
 
             return val;
         });
+
+        return cssMarkup
+        //remove any styles with empty values
+        .replace(
+            EMPTY_STYLE_PATT
+            , ""
+        )
+        //remove the single quotes for any string literal percent
+        .replace(
+            STRING_PERC_PATT
+            , "$1"
+        );
     }
     /**
     * Adds/Updates the style element cssNode
