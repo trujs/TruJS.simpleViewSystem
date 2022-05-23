@@ -775,13 +775,25 @@ function _SimpleTemplate(
                         ? node.nodeName.toLowerCase()
                         : node.nodeName
                     ;
-                    processElement(
-                        parentNamespace
-                        , node
-                        , {}
-                        , context
-                        , `${path}.[${index}]${childName}`
-                    );
+                    //if this is the node with the if attribute then don't update the path
+                    if (node === element) {
+                        processElement(
+                            parentNamespace
+                            , node
+                            , pathExprMap
+                            , context
+                            , path
+                        );
+                    }
+                    else {
+                        processElement(
+                            parentNamespace
+                            , node
+                            , pathExprMap
+                            , context
+                            , `${path}.[${index}]${childName}`
+                        );
+                    }
                 }
             });
         }
