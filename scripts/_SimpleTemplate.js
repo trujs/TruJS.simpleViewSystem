@@ -413,6 +413,7 @@ function _SimpleTemplate(
                 , elPathExprMap.attributes[
                     attributeNames[i]
                 ]
+                , path
             );
         }
 
@@ -421,7 +422,7 @@ function _SimpleTemplate(
     /**
     * @function
     */
-    function processMapAttribute(element, attributeName, context, expressionMap) {
+    function processMapAttribute(element, attributeName, context, expressionMap, path) {
         //wire up the state change handlers
         wireAttributeMap(
             element
@@ -435,6 +436,7 @@ function _SimpleTemplate(
             , attributeName
             , context
             , expressionMap
+            , path
         );
     }
     /**
@@ -470,11 +472,10 @@ function _SimpleTemplate(
     * Handles updates to the state value for a particular attribute
     * @function
     */
-    function updateAttribute(element, attributeName, context, expressionMap) {
+    function updateAttribute(element, attributeName, context, expressionMap, path) {
         var attributeText = expressionMap.cleanText
         , removeAttribute = false
         ;
-
         //looping backwards through the expressions, add each one to the cleanText
         Object.keys(expressionMap.expressions)
         .reverse()
@@ -503,6 +504,9 @@ function _SimpleTemplate(
                     );
                     if (is_nill(result)) {
                         removeAttribute = true;
+                    }
+                    else {
+                        attributeText = result;
                     }
                 }
                 //if non-text value
@@ -536,6 +540,14 @@ function _SimpleTemplate(
             );
         }
         else {
+            //if the attribute already has a value, append
+            if (element.hasAttribute(attributeName)) {
+                if (path.indexOf("self") !== -1) {
+                    attributeText =
+                        `${element.getAttribute(attributeName).trim()} ${attributeText}`
+                    ;
+                }
+            }
             element.setAttribute(
                 attributeName
                 , attributeText
@@ -903,7 +915,7 @@ function _SimpleTemplate(
                             eventName
                             , function handleEvent(event) {
                                 userEventManager.handleExternalEvent(
-                                    eventNamespace
+                                    namespace
                                     , event
                                 );
                             }
