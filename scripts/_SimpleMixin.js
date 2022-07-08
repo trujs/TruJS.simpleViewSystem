@@ -12,6 +12,11 @@ function _SimpleMixin(
         , "watch": "$watch"
     }
     /**
+    * A regular expression pattern for replacing dashes
+    * @property
+    */
+    , DASH_PATT = /[-]/g
+    /**
     * @alias
     */
     , findStateful = statenet_common_findStateful
@@ -84,10 +89,15 @@ function _SimpleMixin(
 
         //loop through the attributes looking for the mixins
         Object.keys(attribs).forEach(function forEachAttr(key) {
-            if (mixins.hasOwnProperty(key)) {
+            var path = key.replace(DASH_PATT, ".")
+            , ref = utils_reference(
+                path
+                , mixins
+            );
+            if (ref.found === true) {
                 var value = attribs[key]
                 , watchers =
-                    mixins[key](element, attribs, context);
+                    ref.value(element, attribs, context);
                 //add the watchers if there are any
                 if (!!watchers) {
                     element.watchers = element.watchers
