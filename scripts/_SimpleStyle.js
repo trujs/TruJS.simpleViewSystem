@@ -10,14 +10,18 @@ function _SimpleStyle(
     , utils_regExp
     , is_array
     , is_nill
+    , is_func
+    , is_objectValue
     , utils_reference
     , utils_copy
+    , xmlBindVariableParser
 ) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^(?:[\r\n \t]*)((?:(?:.)|[\r\n \t])*?)(?:[\r\n \t]*)$/
     , LINE_PATT = /(\r?\n)/g
     , EMPTY_STYLE_PATT = /(?:^|\n\r?)[ \t]*[a-zA-z0-9-_]+[:][ ]?;/g
     , STRING_PERC_PATT = /(?:'|")([0-9]{1,3}[%])(?:'|")/g
+    , MEDIA_SELECTOR_PATT = /[ ]?@[A-z]+[ ][(]([^)]+)[)]/g
     , cnsts = {
         "destroy": "$destroy"
         , "watch": "$addListener"
@@ -123,12 +127,12 @@ function _SimpleStyle(
         blocks.reverse();
         return blocks.filter(function filterBlocks(block) {
             if (!!block.parent) {
-                if (block.selectors[block.selectors.length - 2].indexOf("@") !== -1) {
-                    indent = Array(block.selectors.length).join("\t");
-                    block.parent.body+= indent + block.selectors[block.selectors.length - 1];
-                    block.parent.body+= " {" + block.body.replace(LINE_PATT, "$1" + indent) + "}\n";
-                    return false;
-                }
+                // if (block.selectors[block.selectors.length - 2].indexOf("@") !== -1) {
+                //     indent = Array(block.selectors.length).join("\t");
+                //     block.parent.body+= indent + block.selectors[block.selectors.length - 1];
+                //     block.parent.body+= " {" + block.body.replace(LINE_PATT, "$1" + indent) + "}\n";
+                //     return false;
+                // }
             }
             return true;
         });
@@ -149,7 +153,7 @@ function _SimpleStyle(
     * @function
     */
     function convertBlockToCss(block) {
-        var selector;
+        var selector, mediaQmatch, mediaQ;
 
         //if there isn't anything in the body we don't need to add it
         if (block.body === "\n") {
@@ -172,6 +176,19 @@ function _SimpleStyle(
                 selector = sel;
             }
         });
+
+        if (selector.indexOf("@") !== -1) {
+            mediaQmatch = selector.match(MEDIA_SELECTOR_PATT);
+            if (!!mediaQmatch) {
+                mediaQ = mediaQmatch[0].trim();
+                selector = selector
+                    .replace(MEDIA_SELECTOR_PATT, "")
+                    .trim()
+                ;
+
+                return `${mediaQ} {\n\t${selector} \t{${block.body}\t}\n}`;
+            }
+        }
 
         return selector + " {" + block.body + "}";
     }
@@ -216,21 +233,14 @@ function _SimpleStyle(
     * Processes the style template and returns the css
     * @function
     */
-    function processTemplate(template, context) {
-        var cssMarkup = template.replace(TAG_PATT, function (tag, key) {
-            var ref = utils_reference(
-                key
+    function processTemplate(template, context, expressionMap) {
+        var cssMarkup = !!expressionMap
+            ? updateWithExpression(
+                expressionMap
                 , context
             )
-            , val = ref.value
-            ;
-
-            if (is_nill(val)) {
-                return "";
-            }
-
-            return val;
-        });
+            : template
+        ;
 
         return cssMarkup
         //remove any styles with empty values
@@ -245,11 +255,59 @@ function _SimpleStyle(
         );
     }
     /**
+    * Uses the expression map to update the style text
+    * @function
+    */
+    function updateWithExpression(expressionMap, context) {
+        var styleText = expressionMap.cleanText;
+
+        Object.keys(expressionMap.expressions)
+        .reverse()
+        .forEach(
+            function appendToText(index) {
+                var expr = expressionMap.expressions[index]
+                , result = expr.execute(
+                    context
+                    , {"quiet":true}
+                );
+                if (expr.type === "object") {
+                    result =
+                        Object.keys(result)
+                        .find(
+                            function chooseKey(key) {
+                                return result[key];
+                            }
+                        )
+                    ;
+                }
+                else if (
+                    is_func(result)
+                    || is_objectValue(result)
+                    || is_array(result)
+                ) {
+                    result = cnsts.value;
+                }
+
+                styleText =
+                    styleText.substring(0, index)
+                    + result
+                    + styleText.substring(index)
+                ;
+            }
+        );
+
+        return styleText;
+    }
+    /**
     * Adds/Updates the style element cssNode
     * @function
     */
-    function updateElement(style, template, context) {
-        var css = processTemplate(template, context)
+    function updateElement(style, template, context, expressionMap) {
+        var css = processTemplate(
+            template
+            , context
+            , expressionMap
+        )
         , cssNode = createTextNode("\n" + css + "\n")
         ;
 
@@ -274,6 +332,11 @@ function _SimpleStyle(
 
         //create the style element
         var styleEl = createElement("style")
+        , {pathExpressionMap, cleanMarkup} = xmlBindVariableParser(
+            `<style>\n${template}\n</style>`
+            , context
+        )
+        , expressionMap = pathExpressionMap["$.[0]style.[0]#text"]
         //get the array of watchers
         , watchers = getWatchers(
             template
@@ -292,6 +355,7 @@ function _SimpleStyle(
             styleEl
             , template
             , context
+            , expressionMap
         );
 
         //add the watchers
@@ -304,6 +368,7 @@ function _SimpleStyle(
                         styleEl
                         , template
                         , context
+                        , expressionMap
                     );
                 }
             );
