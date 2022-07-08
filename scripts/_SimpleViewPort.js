@@ -8,6 +8,8 @@ function _SimpleViewPort(
     , views_main_state
     , simpleView
     , simpleTemplate
+    , simpleStyle
+    , views_baseStyle
     , dom_createElement
     , view_userEventManager
     , is_object
@@ -38,6 +40,7 @@ function _SimpleViewPort(
             , attributeStr = ""
             , loaded = false
             , element
+            , styleElement
             ;
 
             if (is_object(attributes)) {
@@ -88,6 +91,12 @@ function _SimpleViewPort(
                 , context
             ).children[0];
 
+            //compile the base styles
+            styleElement = simpleStyle(
+                Object.values(views_baseStyle)
+                , curState
+            );
+
             //initialize the user event manager
             userEventManager.initialize(
                 element
@@ -103,6 +112,7 @@ function _SimpleViewPort(
                 function thenFinishRender(view) {
                     loaded = true;
                     viewport.innerHTML = "";
+                    viewport.appendChild(styleElement);
                     viewport.appendChild(element);
                     return promise.resolve(view);
                 }
