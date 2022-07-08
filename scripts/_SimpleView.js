@@ -25,8 +25,13 @@ function _SimpleView(
     , utils_lookup
     , utils_func_inspector
     , utils_uuid
+    , utils_update
+    , utils_copy
+    , utils_apply
 ) {
     var LD_PATH = /[_]/g
+    , DASH_PATT = /[-]/g
+    , DOT_PATT = /[.]/g
     , TAG_PATT = /\{([^}]+)\}/g
     , cnsts = {
         "destroy": "$destroy"
@@ -319,6 +324,10 @@ function _SimpleView(
             , stateId = childEl.hasAttribute("view-state-id")
                 ? childEl.getAttribute("view-state-id")
                 : childEl.id || generateId(tagName)
+            , controllerName = childEl.hasAttribute("view-controller")
+                ? childEl.getAttribute("view-controller")
+                    .replace(DOT_PATT, "-")
+                : tagName
             , proc = promise.resolve()
             ;
             //see if the controller is stateless
@@ -336,6 +345,7 @@ function _SimpleView(
             if (!isStateless) {
                 proc = getChildState(
                     stateId
+                    , controllerName
                     , parentState
                 );
             }
@@ -355,7 +365,6 @@ function _SimpleView(
                         if (!!childEl.id) {
                             childEl.id = childEl.id.replace(/[.]/g, "-");
                         }
-
                         //create the view
                         return SimpleView(
                             childEl
@@ -457,26 +466,76 @@ function _SimpleView(
     * Gets the property from the state that matches the id
     * @function
     */
-    function getChildState(stateId, state) {
+    function getChildState(stateId, tagName, state) {
         try {
-            //see if the view state is already on the state manager
-            var childState = utils_lookup(
-                stateId
-                , state
-            );
-            if (!!childState) {
-                return promise.resolve(childState);
-            }
-            //resolve the state from the ioc system
+            //create the view path from the tag name
+            var viewPath = tagName.replace(DASH_PATT, ".")
+            , defaultViewState
+            ;
+            //see if there is a default state for this view's tag
             return resolve$(
                 [
-                    `.views.${stateId}.state`
+                    `.views.${viewPath}.defaultState`
                     , {"missingAction":"none"}
                 ]
+            )
+            //see if the view state is already on the state manager
+            .then(
+                function thenCheckParentState(defaultState) {
+                    //record the returned default state (could be nill)
+                    if (!!defaultState) {
+                        defaultViewState = utils_copy(defaultState);
+                    }
+                    //see if the child state already exists on the parent
+                    var childState = utils_lookup(
+                        stateId
+                        , state
+                    );
+                    //if it exists return that
+                    if (!!childState) {
+                        return promise.resolve(childState);
+                    }
+                    //return the default state
+                    return promise.resolve();
+                }
+            )
+            //resolve the state from the ioc system if not found
+            .then(
+                function thenResolveViewState(childState) {
+                    //redirect if child state found
+                    if (!!childState) {
+                        return promise.resolve(childState);
+                    }
+                    //otherwise lookup in the IOC
+                    return resolve$(
+                        [
+                            `.views.${viewPath}.state`
+                            , {"missingAction":"none"}
+                        ]
+                    );
+                }
             )
             //then add this to the parent state
             .then(
                 function thenAddtoParent(childState) {
+                    if (!!defaultViewState) {
+                        //if there is a childState and defaultViewState then combine it with the default
+                        if (!!childState) {
+                            utils_update(
+                                childState
+                                , defaultViewState
+                            );
+                        }
+                        //otherwise if the default state exists then set that as the childState
+                        else {
+                            childState = defaultViewState;
+                        }
+                    }
+                    //if there isn't a child state, just use an empty object
+                    if (!childState) {
+                        childState = {};
+                    }
+                    //add the child state to the parent
                     return addStateByPath(
                         state
                         , stateId
@@ -512,8 +571,12 @@ function _SimpleView(
                 stateId
                 , parentState
             );
-            //add the child state to the path
-            ref.parent[ref.index] = childState;
+            //ensure we aren't re-adding the state
+            if (ref.parent[ref.index] !== childState) {
+                //add the child state to the path
+                ref.parent[ref.index] = childState;
+            }
+
 
             return promise.resolve(ref.parent[ref.index]);
         }
@@ -654,7 +717,7 @@ function _SimpleView(
     * @param {number} [position] The position in the parent element that the
     * child view's element will be inserted; if omitted it will be appended.
     */
-    function addChildView(
+    async function addChildView(
         parentView
         , id
         , tagName
@@ -664,42 +727,12 @@ function _SimpleView(
         , newState
     ) {
         try {
-            var childPath, ref, parentState, views;
-            //add the new state to the parent state
-            if (is_object(newState)) {
-                //get the parent state
-                if (id.indexOf(".") !== -1) {
-                    ref = utils_reference(
-                        id
-                        , parentView.state
-                    );
-                    if (ref.found) {
-                        parentState = ref.parent
-                        childPath = ref.index;
-                    }
-                    else {
-                        ref = utils_ensure(
-                            id
-                            , parentView.state
-                        );
-                        parentState = ref.parent
-                        childPath = ref.index;
-                    }
-                }
-                else {
-                    parentState = parentView.state;
-                    childPath = id;
-                }
-                //if it's not there then move it
-                if (!(childPath in parentState) || !parentState[childPath]) {
-                    parentState[childPath] = newState;
-                }
-            }
-
-            var parent = parentView.element
+            var childPath, ref, parentState, views
+            , parent = parentView.element
             , tempEl, element, view
-            , childState = getChildState(
+            , childState = await getChildState(
                 id
+                , tagName
                 , parentView.state
             )
             , tagHtml = createViewHtml(
@@ -710,6 +743,13 @@ function _SimpleView(
             //determine the view namespace
             , viewNamespace = parentView.namespace
             ;
+            //add the newState contents to the child state
+            if (is_object(newState)) {
+                utils_apply(
+                    newState
+                    , childState
+                );
+            }
             //if there is a selector use it to get the parent element
             if (is_string(selector) && !is_empty(selector)) {
                 parent = parent.querySelector(selector);

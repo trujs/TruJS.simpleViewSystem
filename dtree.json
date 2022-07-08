@@ -1,6 +1,5 @@
 {
     "document": ["+document"]
-
     , "is": [{
         "nill": [":PunyJS.core.is.Nill"]
         , "string": [":PunyJS.core.is.String"]
@@ -14,6 +13,9 @@
     , "utils": [{
         "reference": [":PunyJS.core.object.Reference"]
         , "getType": [":PunyJS.core.utils.GetType"]
+        , "update": [":PunyJS.core.object.Update"]
+        , "copy": [":PunyJS.core.object.Copy"]
+        , "apply": [":PunyJS.core.object.Apply"]
     }]
 
     , "classHelper": [":PunyJS.core.dom._ClassHelper", []]
