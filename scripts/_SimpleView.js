@@ -9,6 +9,7 @@ function _SimpleView(
     , simpleTemplate
     , simpleErrors
     , simpleStyle
+    , simpleMixin
     , reporter
     , is_array
     , is_object
@@ -107,7 +108,16 @@ function _SimpleView(
             , template
             , context
         )
-        //the process any child elements
+        //then process any mixins
+        .then(
+            function thenProcessMixins() {
+                return processMixins(
+                    view.element
+                    , view.stateContext
+                );
+            }
+        )
+        //then process any child elements
         .then(
             function thenProcessChildElements() {
                 if (!is_empty(view.children)) {
@@ -303,7 +313,31 @@ function _SimpleView(
                         , controller
                     );
                 }
-                //if there isn't a controller then process the children
+                return promise.resolve();
+            }
+        )
+        //then execute any mixins
+        .then (
+            function thenExecuteMixins(view) {
+                //if the view is null then we need to process any mixins for this element
+                if (!view) {
+                    return processMixins(
+                        childEl
+                        , parentState
+                    );
+                }
+                return promise.resolve(view);
+            }
+        )
+        //then if there wasn't a view then process the child elements
+        .then(
+            function thenProcessChildElements(result) {
+                //if the result is an object then it's a view
+                if (is_object(result)) {
+                    //return the resulting view
+                    return promise.resolve(result);
+                }
+                //otherwise process any children
                 if (childEl.childNodes.length > 0) {
                     return processChildElements(
                         parentNamespace
@@ -311,7 +345,6 @@ function _SimpleView(
                         , parentState
                     );
                 }
-                return promise.resolve();
             }
         );
     }
@@ -404,6 +437,15 @@ function _SimpleView(
         );
 
         return views;
+    }
+    /**
+    * @function
+    */
+    function processMixins(element, state) {
+        return simpleMixin(
+            element
+            , state
+        );
     }
 
     /**

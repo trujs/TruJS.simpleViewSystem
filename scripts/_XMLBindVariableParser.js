@@ -790,6 +790,10 @@ function _XMLBindVariableParser(
                 || token === "STARTTAG:LEAF"
             ) {
                 inTag = false;
+                if (!!curAttribName) {
+                    cleanMarkup+= ` ${curAttribName}`;
+                    curAttribName = null;
+                }
             }
             //handle inString
             if (

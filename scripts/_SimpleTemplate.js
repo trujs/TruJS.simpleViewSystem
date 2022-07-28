@@ -15,7 +15,6 @@
 function _SimpleTemplate(
     promise
     , simpleExpression
-    , simpleMixin
     , simpleMethods
     , simpleStyle
     , createSimpleNamespace
@@ -181,6 +180,7 @@ function _SimpleTemplate(
         self.parentNode
             .removeChild(self)
         ;
+        element.watchers = element.watchers || [];
     }
     /**
     * Combines the attribute with the element, appending with a space if the attribute name exists in element already
@@ -328,12 +328,6 @@ function _SimpleTemplate(
                     , pathExprMap
                     , context
                     , path
-                );
-
-                //add any mixins
-                simpleMixin(
-                    element
-                    , context
                 );
 
                 //this is a work around for the proper option to be selected
@@ -488,7 +482,7 @@ function _SimpleTemplate(
                 );
                 //if the result is nill and this is the only expression, remove the attribute
                 if (is_nill(result)) {
-                    if (expressionMap.expressions.length ===1) {
+                    if (expressionMap.expressions.length === 1) {
                         removeAttribute = true;
                     }
                 }

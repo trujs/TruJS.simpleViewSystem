@@ -11,7 +11,6 @@ function _SimpleViewPort(
     , simpleStyle
     , views_baseStyle
     , dom_createElement
-    , view_userEventManager
     , is_object
     , utils_apply
 ) {
@@ -20,10 +19,6 @@ function _SimpleViewPort(
     * @alias
     */
     , createElement = dom_createElement
-    /**
-    * @alias
-    */
-    , userEventManager = view_userEventManager
     ;
 
     /**
@@ -95,12 +90,6 @@ function _SimpleViewPort(
             styleElement = simpleStyle(
                 Object.values(views_baseStyle)
                 , curState
-            );
-
-            //initialize the user event manager
-            userEventManager.initialize(
-                element
-                , state.main.userEventState
             );
 
             return simpleView(
