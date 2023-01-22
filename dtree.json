@@ -16,6 +16,7 @@
         , "update": [":PunyJS.core.object.Update"]
         , "copy": [":PunyJS.core.object.Copy"]
         , "apply": [":PunyJS.core.object.Apply"]
+        , "regExp": [":PunyJS.core.regexp._RegExp",[]]
     }]
 
     , "classHelper": [":PunyJS.core.dom._ClassHelper", []]

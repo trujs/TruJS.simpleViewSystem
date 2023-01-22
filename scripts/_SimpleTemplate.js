@@ -15,11 +15,12 @@
 function _SimpleTemplate(
     promise
     , simpleExpression
+    , expression_interface
     , simpleMethods
     , simpleStyle
     , createSimpleNamespace
     , xmlBindVariableParser
-    , view_userEventManager
+    , app_subsystem_userInterface_userEventManager
     , statenet_common_findStateful
     , dom_createElement
     , dom_createTextNode
@@ -77,7 +78,7 @@ function _SimpleTemplate(
     /**
     * @alias
     */
-    , userEventManager = view_userEventManager
+    , userEventManager = app_subsystem_userInterface_userEventManager
     /**
     * @alias
     */
@@ -141,7 +142,7 @@ function _SimpleTemplate(
         //process any event attributes
         if (!is_empty(eventAttributes)) {
             processEventAttributes(
-                `${viewNamespace}`
+                viewNamespace
                 , element
                 , context
                 , eventAttributes
@@ -482,7 +483,7 @@ function _SimpleTemplate(
                 );
                 //if the result is nill and this is the only expression, remove the attribute
                 if (is_nill(result)) {
-                    if (expressionMap.expressions.length === 1) {
+                    if (Object.keys(expressionMap.expressions).length === 1) {
                         removeAttribute = true;
                     }
                 }
@@ -688,7 +689,12 @@ function _SimpleTemplate(
     * @function
     */
     function processIfElement(parentNamespace, element, pathExprMap, context, path) {
-        var expr = element.getAttribute("expr")
+        var compiledExpr = getCompiledExpression(
+            element
+            , "if"
+            , pathExprMap
+            , path
+        )
         , elseEl = element.nextElementSibling
         , elseNodes
         ;
@@ -700,7 +706,7 @@ function _SimpleTemplate(
         doIf(
             parentNamespace
             , element
-            , expr
+            , compiledExpr
             , pathExprMap
             , element.childNodes
             , elseNodes
@@ -716,9 +722,14 @@ function _SimpleTemplate(
     * @function
     */
     function processIfAttrib(parentNamespace, element, pathExprMap, context, path) {
-        var expr = element.getAttribute("if")
-        , elseEl = element.nextElementSibling
+        var compiledExpr = getCompiledExpression(
+            element
+            , "if"
+            , pathExprMap
+            , path
+        )
         , pass
+        , elseEl = element.nextElementSibling
         ;
 
         element.removeAttribute("if");
@@ -735,7 +746,7 @@ function _SimpleTemplate(
         pass = doIf(
             parentNamespace
             , element
-            , expr
+            , compiledExpr
             , pathExprMap
             , [element]
             , !!elseEl && [elseEl]
@@ -757,12 +768,13 @@ function _SimpleTemplate(
     * @function
     */
     function doIf(parentNamespace, element, expr, pathExprMap, ifNodes, elseNodes, context, path) {
-        var pass = !!simpleExpression(
-            expr.replace(TAG_PATT, "$1")
-            , context
-        ).result
+        var pass = expr.execute(
+            context
+            , {"quiet":true}
+        )
         , nodes
         , childName
+        , offset = 0
         ;
 
         //if pass then use the if children
@@ -775,6 +787,18 @@ function _SimpleTemplate(
 
         //process the nodes
         if (!!nodes) {
+            //if the ifNodes[0] IS the element and pass is false
+            //  we need to find the index of the else as the offset
+            //  so the path matches the expression map
+            //  this should only happen when using if/else attributes
+            if (!pass && ifNodes[0] === element) {
+                offset = 1;
+                path = path.substring(
+                    0
+                    , path.lastIndexOf(".")
+                );
+            }
+
             nodes.forEach(function forEachNode(node, index) {
                 if (node.nodeType === 1 || (node.nodeType === 3 && !WSP_PATT.test(node.nodeValue))) {
                     childName = is_upper(node.nodeName)
@@ -797,7 +821,7 @@ function _SimpleTemplate(
                             , node
                             , pathExprMap
                             , context
-                            , `${path}.[${index}]${childName}`
+                            , `${path}.[${index + offset}]${childName}`
                         );
                     }
                 }
@@ -805,6 +829,43 @@ function _SimpleTemplate(
         }
 
         return pass;
+    }
+    /**
+    * Either gets the compiled expression from the path expression map or create
+    * a new compiled expression from the attribute value and add it to the path
+    * expression map
+    * @function
+    */
+    function getCompiledExpression(element, attributeName, pathExprMap, path) {
+        var expr = element.getAttribute(attributeName)
+        , mappedTag = pathExprMap[path]
+        , mappedExpr = mappedTag?.attributes[attributeName]
+        ;
+        //if this tag does not have an expression map entry then create it
+        if (!mappedTag) {
+            pathExprMap[path] = {
+                "type": "tag"
+                , "attributes": {}
+            };
+        }
+        //if there isn't an if attribute
+        if (!mappedExpr) {
+            pathExprMap[path].attributes[attributeName] = {
+                "type": "attribute"
+                , "expressions": {
+                    "0": expression_interface(
+                        expr
+                    )
+                }
+                , "cleanText": ""
+            };
+        }
+        //get the compiled expression
+        return pathExprMap[path]
+            .attributes
+            [attributeName]
+            .expressions["0"]
+        ;
     }
     /**
     * Processes a text node

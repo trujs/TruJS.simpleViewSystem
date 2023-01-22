@@ -477,7 +477,7 @@ function _SimpleView(
             [
                `.views.${name}.controller`
                , {
-                   "missingAction":"none"
+                   "quiet": true
                    , "caseInsensitive": true
                }
             ]
@@ -508,7 +508,7 @@ function _SimpleView(
     * Gets the property from the state that matches the id
     * @function
     */
-    function getChildState(stateId, tagName, state) {
+    function getChildState(stateId, tagName, parentState) {
         try {
             //create the view path from the tag name
             var viewPath = tagName.replace(DASH_PATT, ".")
@@ -518,7 +518,7 @@ function _SimpleView(
             return resolve$(
                 [
                     `.views.${viewPath}.defaultState`
-                    , {"missingAction":"none"}
+                    , {"quiet": true}
                 ]
             )
             //see if the view state is already on the state manager
@@ -531,7 +531,7 @@ function _SimpleView(
                     //see if the child state already exists on the parent
                     var childState = utils_lookup(
                         stateId
-                        , state
+                        , parentState
                     );
                     //if it exists return that
                     if (!!childState) {
@@ -552,7 +552,7 @@ function _SimpleView(
                     return resolve$(
                         [
                             `.views.${viewPath}.state`
-                            , {"missingAction":"none"}
+                            , {"quiet": true}
                         ]
                     );
                 }
@@ -579,7 +579,7 @@ function _SimpleView(
                     }
                     //add the child state to the parent
                     return addStateByPath(
-                        state
+                        parentState
                         , stateId
                         , childState
                     );
@@ -768,72 +768,64 @@ function _SimpleView(
         , position
         , newState
     ) {
-        try {
-            var childPath, ref, parentState, views
-            , parent = parentView.element
-            , tempEl, element, view
-            , childState = await getChildState(
-                id
-                , tagName
-                , parentView.state
-            )
-            , tagHtml = createViewHtml(
-                tagName
-                , id
-                , attributes
-            )
-            //determine the view namespace
-            , viewNamespace = parentView.namespace
-            ;
-            //add the newState contents to the child state
-            if (is_object(newState)) {
-                utils_apply(
-                    newState
-                    , childState
-                );
-            }
-            //if there is a selector use it to get the parent element
-            if (is_string(selector) && !is_empty(selector)) {
-                parent = parent.querySelector(selector);
-                if (!parent) {
-                    throw new Error(simpleErrors.invalidViewContainerSelector);
-                }
-            }
-            //run a temp element through the simple template to process the tagHTML
-            element = simpleTemplate(
-                viewNamespace
-                , tagHtml
-                , parentView.context
-            ).children[0];
-            //create the view the same way it would be created
-            return processChildElement(
-                parentView.namespace
-                , parentView.state
-                , element
-            )
-            .then(
-                function thenAddChildView(childView) {
-                    //add the element to the parent
-                    if (is_nill(position)) {
-                        parent.appendChild(element);
-                        parentView.views.push(childView);
-                    }
-                    else {
-                        parent.insertBefore(
-                            element
-                            , parent.childNodes[position]
-                        );
-                        parentView.views.splice(position, 0, childView);
-                    }
-                    parentView.children.push(element);
-
-                    return promise.resolve(childView);
-                }
+        var childPath, ref, parentState, views
+        , parent = parentView.element
+        , tempEl, element, view
+        , childState = await getChildState(
+            id
+            , tagName
+            , parentView.state
+        )
+        , tagHtml = createViewHtml(
+            tagName
+            , id
+            , attributes
+        )
+        //determine the view namespace
+        , viewNamespace = parentView.namespace
+        , childView
+        ;
+        //add the newState contents to the child state
+        if (is_object(newState)) {
+            utils_apply(
+                newState
+                , childState
             );
         }
-        catch(ex) {
-            return promise.reject(ex);
+        //if there is a selector use it to get the parent element
+        if (is_string(selector) && !is_empty(selector)) {
+            parent = parent.querySelector(selector);
+            if (!parent) {
+                throw new Error(simpleErrors.invalidViewContainerSelector);
+            }
         }
+        //run a temp element through the simple template to process the tagHTML
+        element = simpleTemplate(
+            viewNamespace
+            , tagHtml
+            , parentView.context
+        ).children[0];
+        //create the view the same way it would be created
+        childView = await processChildElement(
+            parentView.namespace
+            , parentView.state
+            , element
+        );
+        //add the element to the parent
+        if (is_nill(position)) {
+            parent.appendChild(element);
+            parentView.views.push(childView);
+        }
+        else {
+            parent.insertBefore(
+                element
+                , parent.childNodes[position]
+            );
+            parentView.views.splice(position, 0, childView);
+        }
+        parentView.children.push(element);
+
+        return childView;
     }
     /**
     * Creates an html tag with the supplied values

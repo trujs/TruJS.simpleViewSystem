@@ -51,7 +51,7 @@ function _SimpleViewPort(
             //apply main's state to the application's state
             utils_apply(
                 views_main_state
-                , state.main
+                , state
             );
 
             if (!context) {
@@ -59,7 +59,7 @@ function _SimpleViewPort(
             }
             Object.setPrototypeOf(
                 context
-                , state.main
+                , state
             );
 
             template = template.replace(
@@ -95,7 +95,7 @@ function _SimpleViewPort(
             return simpleView(
                 element
                 , views_main_controller
-                , curState.main
+                , curState
             )
             .then(
                 function thenFinishRender(view) {
