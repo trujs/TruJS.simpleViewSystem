@@ -41,11 +41,11 @@ function _SimpleView(
         , "value": "$value"
         , "content": "$content"
         , "tagTemplate": "<{tagName} id=\"{id}\"{attributes}></{tagName}>"
-        /**
-        * The name of the element attribute which holds the namespace
-        * @constant
-        */
-        , "viewNamespaceAttribName": "view-ns"
+        , "viewAttributeNames": {
+            "namespace": "view-ns"
+            , "controller": "view-controller"
+            , "stateId": "view-state-id"
+        }
     }
     /**
     * A list of tag names that have already been checked for a controller and don't have one
@@ -139,13 +139,6 @@ function _SimpleView(
                         view
                     );
                     view.views = childViews;
-                }
-                //if there is a $render function on the context then fire it
-                if (view.context.hasOwnProperty("$render")) {
-                    utils_func_async(
-                        view.context["$render"]
-                        , [view]
-                    );
                 }
                 //inform the view it's done rendering
                 renderedCb();
@@ -292,8 +285,8 @@ function _SimpleView(
             return ;
         }
         var tagName = getElementName(childEl)
-        , ctrlName = childEl.hasAttribute("view-controller")
-            ? childEl.getAttribute("view-controller")
+        , ctrlName = childEl.hasAttribute(cnsts.viewAttributeNames.controller)
+            ? childEl.getAttribute(cnsts.viewAttributeNames.controller)
             : getElementName(childEl).replace(/-/g, ".")
         ;
         //try to find a controller
@@ -354,11 +347,11 @@ function _SimpleView(
     function processChildView(parentNamespace, tagName, parentState, childEl, controller) {
         try {
             var childState, isStateless
-            , stateId = childEl.hasAttribute("view-state-id")
-                ? childEl.getAttribute("view-state-id")
+            , stateId = childEl.hasAttribute(cnsts.viewAttributeNames.stateId)
+                ? childEl.getAttribute(cnsts.viewAttributeNames.stateId)
                 : childEl.id || generateId(tagName)
-            , controllerName = childEl.hasAttribute("view-controller")
-                ? childEl.getAttribute("view-controller")
+            , controllerName = childEl.hasAttribute(cnsts.viewAttributeNames.controller)
+                ? childEl.getAttribute(cnsts.viewAttributeNames.controller)
                     .replace(DOT_PATT, "-")
                 : tagName
             , proc = promise.resolve()
@@ -679,6 +672,8 @@ function _SimpleView(
     * @function
     */
     function destroyView(view) {
+        //destroy any watchers now so nothing is fired during destroying
+        destroyWatchers(view);
         //remove the element from the parent now to stop any rendering
         if (!!view.element.parentNode) {
             view.element.parentNode.removeChild(
@@ -687,8 +682,6 @@ function _SimpleView(
         }
         //destroy the child elements
         destroyChildren(view);
-        //destroy any watchers
-        destroyWatchers(view);
         //destroy any child views
         destroyViews(view);
         //run the context destroy method
@@ -832,7 +825,8 @@ function _SimpleView(
     * @function
     */
     function createViewHtml(tagName, id, attributes) {
-        var attrStr = "";
+        var attrStr = ""
+        ;
 
         //add the attribute values to the context and update the attr string
         if (is_object(attributes)) {
@@ -883,9 +877,9 @@ function _SimpleView(
             }
             , resolved = false
             , watchers;
-            //add the view-ns attribute
+            //add the view namespace attribute
             element.setAttribute(
-                'view-ns'
+                cnsts.viewAttributeNames.namespace
                 , view.namespace
             );
             view.attributes.viewNs = view.namespace;
@@ -928,21 +922,17 @@ function _SimpleView(
             if (is_promise(watchers)) {
                 return watchers
                 .then(
-                    function thenCreateWatchers(resolvedWatchers) {
-                        createWatchers(
-                            view
-                            , resolvedWatchers
-                        );
-                        return promise.resolve(view);
-                    }
+                    finalizeView.bind(
+                        null
+                        , view
+                    )
                 );
             }
-
-            //create the watchers
-            createWatchers(view, watchers);
-
             //return the view
-            return promise.resolve(view);
+            return finalizeView(
+                view
+                , watchers
+            );
         }
         catch(ex) {
             return promise.reject(ex);
@@ -956,8 +946,8 @@ function _SimpleView(
             ? element.nodeName.toLowerCase()
             : element.nodeName
         //start with the view state id so we can build on the state path
-        , stateId = element.hasAttribute("view-state-id")
-            ? element.getAttribute("view-state-id")
+        , stateId = element.hasAttribute(cnsts.viewAttributeNames.stateId)
+            ? element.getAttribute(cnsts.viewAttributeNames.stateId)
             //for backwards compatibility, the id represents the state id
             : element.hasAttribute("id")
                 ? element.getAttribute("id")
@@ -965,6 +955,44 @@ function _SimpleView(
         ;
 
         return `${parentNamespace}.${stateId}`;
+    }
+    /**
+    * @function
+    */
+    function finalizeView(view, watchers) {
+        try {
+            //create any watchers returned from the controller
+            createWatchers(
+                view
+                , watchers
+            );
+            //run the $render function on the controllers context
+            executeControllerRender(
+                view
+            );
+
+            return promise.resolve(view);
+        }
+        catch(ex) {
+            return promise.reject(ex);
+        }
+    }
+    /**
+    * @function
+    */
+    function executeControllerRender(view) {
+        try {
+            //if there is a $render function on the context then fire it
+            if (view.context.hasOwnProperty("$render")) {
+                utils_func_async(
+                    view.context["$render"]
+                    , [view]
+                );
+            }
+        }
+        catch(ex) {
+
+        }
     }
 
     /**
