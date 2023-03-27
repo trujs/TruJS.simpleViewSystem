@@ -11,7 +11,7 @@
         {
             "type": "ioc.monolith"
             , "base": [
-                "{PunyJS.ui.gui.expression}/dtree.json"
+                "{PunyJS.expression}/dtree.json"
             ]
             , "dtree": "dtree.json"
             , "config": {
