@@ -207,9 +207,8 @@ function _SimpleTemplate(
     * processes it's shildren
     * @function
     */
-    function processElement(parentNamespace, element, pathExprMap, data, path) {
-        var context = createContext(element, data)
-        , eventAttributes
+    function processElement(parentNamespace, element, pathExprMap, context, path) {
+        var eventAttributes
         , namespace
         ;
         //a temporary container for watchers
@@ -792,7 +791,7 @@ function _SimpleTemplate(
             //  so the path matches the expression map
             //  this should only happen when using if/else attributes
             if (!pass && ifNodes[0] === element) {
-                offset = 1;
+                offset = [...element.parentElement.children].indexOf(element) + 1;
                 path = path.substring(
                     0
                     , path.lastIndexOf(".")
@@ -1196,13 +1195,19 @@ function _SimpleTemplate(
             , cleanMarkup
         );
 
+        //get the context now so we can use it on the self tag
+        context = createContext(
+            element
+            , data
+        );
+
         //if there is a self child tag then apply it's attributes to the tag
         if (!!element.children[0] && element.children[0].tagName.toLowerCase() === "self") {
             processSelfTag(
                 viewNamespace
                 , element
                 , pathExpressionMap
-                , data
+                , context
             );
         }
         //process each child of the element; the element is either an element
@@ -1212,7 +1217,7 @@ function _SimpleTemplate(
             viewNamespace
             , Array.from(element.childNodes)
             , pathExpressionMap
-            , data
+            , context
             , "$"
         );
 
