@@ -534,7 +534,7 @@ function _XMLBindVariableParser(
             else if (tokenType === "TAGNAME") {
                 curChildCount = pathChildCountMap[
                     xpath.join(".")
-                ];
+                ] || 0;
                 //increment then child count
                 pathChildCountMap[
                     xpath.join(".")
@@ -546,6 +546,10 @@ function _XMLBindVariableParser(
             }
             //if this is a start tag open then create a parent path entry
             else if (token === "STARTTAG:CLOSE") {
+                //if we are in an attribute
+                if (inAttrib) {
+                    inAttrib = false;
+                }
                 //since this is not a leaf, we know it could have children
                 //add an entry to the map
                 pathChildCountMap[
@@ -554,6 +558,11 @@ function _XMLBindVariableParser(
             }
             //if this is leaf then update the xpath (remove last seg)
             else if (token === "STARTTAG:LEAF") {
+                //if we are in an attribute
+                if (inAttrib) {
+                    inAttrib = false;
+                    xpath.pop();
+                }
                 //remove the tag name from the path
                 xpath.pop();
             }

@@ -278,3 +278,119 @@ function xmlBindVariableParserTest4(
         }
     );
 }
+/**
+* @test
+*   @title TruJS.simpleViewSystem.scripts._XMLBindVariableParser: regression,
+*/
+function xmlBindVariableParserTest5(
+    controller
+    , mock_callback
+) {
+    var xmlBindVariableParser, mockXml, pathExpressionMap, cleanMarkup;
+
+    arrange(
+        async function arrangeFn() {
+            xmlBindVariableParser = await controller(
+                [
+                    ":TruJS.simpleViewSystem.scripts._XMLBindVariableParser"
+                    , []
+                ]
+            );
+
+            mockXml = `<form
+    validate="{:validateForm($element, $validate):}">
+    <div
+        class="image-comptiaLogo">
+    </div>
+    <h1>
+        {:title:}
+    </h1>
+    <h3>
+        {:subTitle:}
+    </h3>
+    <div
+        repeat="$k,$i,$field in fields"
+        id="field{:$k:}"
+        class="field-group">
+        <label
+            if="$field._type !== 'link'">
+            {:$field.label:}
+        </label>
+        <input
+            if="$field._type !== 'link'"
+            name="{:$k:}"
+            type="{:$field._type:}"
+            placeholder="{:$field.placeholder:}"
+            pattern="{:$field._pattern:}"
+            autocomplete='{:{"null":"$field._type === password"}:}'
+            set-focus="{:setFocus($element, $field.$focus):}"
+            required/>
+        <button
+            else
+            class="link-button"
+            type="button"
+            name="forgot-{:$k:}"
+            set-focus="{:setFocus($element, $field.$focus):}">
+            {:$field.label:}
+        </button>
+    </div>
+    <button
+        class="continue-button"
+        type="button"
+        name="continue"
+        set-disabled="{:setDisabled($element,buttons.continue.$disabled):}"
+        set-focus="{:setFocus($element,buttons.continue.$focus):}">
+        {:buttons.continue.label:}
+    </button>
+</form>`;
+        }
+    );
+
+    act(
+        function actFn() {
+            //destructure the result
+            (
+                {pathExpressionMap, cleanMarkup} = xmlBindVariableParser(
+                    mockXml
+                )
+            );
+        }
+    );
+
+    assert(
+        function assertFn(test) {
+            test("The cleanMarkup should be")
+            .value(cleanMarkup)
+            .equals(
+                '<form>\n' +
+                '    <div class="image-comptiaLogo">\n' +
+                '    </div>\n' +
+                '    <h1>\n' +
+                '        {:title:}\n' +
+                '    </h1>\n' +
+                '    <h3>\n' +
+                '        {:subTitle:}\n' +
+                '    </h3>\n' +
+                '    <div repeat="$k,$i,$field in fields" class="field-group">\n' +
+                `        <label if="$field._type !== 'link'">\n` +
+                '            {:$field.label:}\n' +
+                '        </label>\n' +
+                `        <input if="$field._type !== 'link'" required/>\n` +
+                '        <button else class="link-button" type="button">\n' +
+                '            {:$field.label:}\n' +
+                '        </button>\n' +
+                '    </div>\n' +
+                '    <button class="continue-button" type="button" name="continue">\n' +
+                '        {:buttons.continue.label:}\n' +
+                '    </button>\n' +
+                '</form>'
+            );
+
+            test("The path expression map should be")
+            .value(pathExpressionMap)
+            .stringify()
+            .equals('{"$.[0]form":{"type":"tag","attributes":{"validate":{"type":"attribute","expressions":{"0":{"variables":["validateForm","$element","$validate"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[1]h1.[0]#text":{"type":"text","expressions":{"0":{"variables":["title"],"type":"variable"}},"cleanText":""},"$.[0]form.[2]h3.[0]#text":{"type":"text","expressions":{"0":{"variables":["subTitle"],"type":"variable"}},"cleanText":""},"$.[0]form.[3]div":{"type":"tag","attributes":{"id":{"type":"attribute","expressions":{"5":{"variables":["$k"],"type":"variable"}},"cleanText":"field"}}},"$.[0]form.[3]div.[0]label.[0]#text":{"type":"text","expressions":{"0":{"variables":["$field.label"],"type":"variable"}},"cleanText":""},"$.[0]form.[3]div.[1]input":{"type":"tag","attributes":{"name":{"type":"attribute","expressions":{"0":{"variables":["$k"],"type":"variable"}},"cleanText":""},"type":{"type":"attribute","expressions":{"0":{"variables":["$field._type"],"type":"variable"}},"cleanText":""},"placeholder":{"type":"attribute","expressions":{"0":{"variables":["$field.placeholder"],"type":"variable"}},"cleanText":""},"pattern":{"type":"attribute","expressions":{"0":{"variables":["$field._pattern"],"type":"variable"}},"cleanText":""},"autocomplete":{"type":"attribute","expressions":{"0":{"variables":["$field._type","password"],"type":"object"}},"cleanText":""},"set-focus":{"type":"attribute","expressions":{"0":{"variables":["setFocus","$element","$field.$focus"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[3]div.[2]button":{"type":"tag","attributes":{"name":{"type":"attribute","expressions":{"7":{"variables":["$k"],"type":"variable"}},"cleanText":"forgot-"},"set-focus":{"type":"attribute","expressions":{"0":{"variables":["setFocus","$element","$field.$focus"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[3]div.[2]button.[0]#text":{"type":"text","expressions":{"0":{"variables":["$field.label"],"type":"variable"}},"cleanText":""},"$.[0]form.[4]button":{"type":"tag","attributes":{"set-disabled":{"type":"attribute","expressions":{"0":{"variables":["setDisabled","$element","buttons.continue.$disabled"],"type":"execution"}},"cleanText":""},"set-focus":{"type":"attribute","expressions":{"0":{"variables":["setFocus","$element","buttons.continue.$focus"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[4]button.[0]#text":{"type":"text","expressions":{"0":{"variables":["buttons.continue.label"],"type":"variable"}},"cleanText":""}}')
+            ;
+        }
+    );
+}
