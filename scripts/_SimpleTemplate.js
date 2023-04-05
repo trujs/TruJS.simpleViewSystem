@@ -207,10 +207,13 @@ function _SimpleTemplate(
     * processes it's shildren
     * @function
     */
-    function processElement(parentNamespace, element, pathExprMap, context, path) {
+    function processElement(parentNamespace, element, pathExprMap, data, path) {
         var eventAttributes
         , namespace
-        ;
+        , context = createContext(
+            element
+            , data
+        );
         //a temporary container for watchers
         element.watchers = [];
         //see if this is a repeat
@@ -500,7 +503,7 @@ function _SimpleTemplate(
                         removeAttribute = true;
                     }
                     else {
-                        attributeText = result;
+                        attributeText = attributeText + result;
                     }
                 }
                 //if non-text value
@@ -1179,6 +1182,7 @@ function _SimpleTemplate(
         , childIndex = 0
         , childNode
         , childPath
+        , context
         ;
 
         //parse the markup and destructure the result
@@ -1195,14 +1199,13 @@ function _SimpleTemplate(
             , cleanMarkup
         );
 
-        //get the context now so we can use it on the self tag
-        context = createContext(
-            element
-            , data
-        );
-
         //if there is a self child tag then apply it's attributes to the tag
         if (!!element.children[0] && element.children[0].tagName.toLowerCase() === "self") {
+            //get the context now so we can use it on the self tag
+            context = createContext(
+                element
+                , data
+            );
             processSelfTag(
                 viewNamespace
                 , element
@@ -1217,7 +1220,7 @@ function _SimpleTemplate(
             viewNamespace
             , Array.from(element.childNodes)
             , pathExpressionMap
-            , context
+            , data
             , "$"
         );
 
