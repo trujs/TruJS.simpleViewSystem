@@ -33,6 +33,7 @@ function _SimpleTemplate(
     , is_string
     , is_upper
     , utils_reference
+    , reporter
     , errors
 ) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
@@ -47,29 +48,6 @@ function _SimpleTemplate(
         , "destroy": "$destroy"
         , "watch": "$addListener"
         , "unwatch": "$removeListener"
-        , "handledEvents": [
-            "pointermove"
-            , "pointerdown"
-            , "pointerup"
-            , "pointerover"
-            , "pointerout"
-            , "dblclick"
-            , "contextmenu"
-            , "keydown"
-            , "keyup"
-            , "dragstart"
-            , "dragend"
-            , "dragenter"
-            , "dragleave"
-            , "drop"
-            , "focusin"
-            , "focusout"
-            , "wheel"
-            , "resize"
-            , "input"
-            , "submit"
-            , "reset"
-        ]
     }
     /**
     * @alias
@@ -372,6 +350,16 @@ function _SimpleTemplate(
             , "value": element
         };
 
+        properties["$state"] = {
+            "enumerable": true
+            , "value": findStateful(data)
+        };
+
+        properties["$"] = {
+            "enumerable": true
+            , "value": data
+        };
+
         return Object.create(
             data
             , properties
@@ -470,40 +458,23 @@ function _SimpleTemplate(
     * @function
     */
     function updateAttribute(element, attributeName, context, expressionMap, path) {
-        var attributeText = expressionMap.cleanText
+        var expressionResults = processMapExpression(
+            expressionMap
+            , context
+        )
         , removeAttribute = false
+        , attributeText = expressionMap.cleanText
         ;
-        //looping backwards through the expressions, add each one to the cleanText
-        Object.keys(expressionMap.expressions)
+        //loop through the expression results and append to the attribute text
+        Object.keys(expressionResults)
         .reverse()
         .forEach(
             function appendToText(index) {
-                var expr = expressionMap.expressions[index]
-                , result = expr.execute(
-                    context
-                    , {"quiet":true}
-                );
+                var result = expressionResults[index];
                 //if the result is nill and this is the only expression, remove the attribute
                 if (is_nill(result)) {
-                    if (Object.keys(expressionMap.expressions).length === 1) {
+                    if (expressionResults.length === 1) {
                         removeAttribute = true;
-                    }
-                }
-                //if the expression is an object type, choose the key for
-                //  the first true value
-                else if (expr.type === "object") {
-                    result =
-                    Object.keys(result)
-                    .find(
-                        function chooseKey(key) {
-                            return result[key];
-                        }
-                    );
-                    if (is_nill(result)) {
-                        removeAttribute = true;
-                    }
-                    else {
-                        attributeText = attributeText + result;
                     }
                 }
                 //if non-text value
@@ -512,13 +483,16 @@ function _SimpleTemplate(
                     || is_objectValue(result)
                     || is_array(result)
                 ) {
+                    attributeText = cnsts.value;
                     if (!element.hasAttribute(attributeName)) {
-                        element.setAttribute(attributeName, cnsts.value);
+                        element.setAttribute(
+                            attributeName
+                            , attributeText
+                        );
                     }
                     element.getAttributeNode(
                         attributeName
                     )[cnsts.value] = result;
-                    attributeText = cnsts.value;
                 }
                 //otherwise add the result to the attribute text at the index position
                 else {
@@ -535,23 +509,63 @@ function _SimpleTemplate(
             element.removeAttribute(
                 attributeName
             );
+            return;
         }
-        else {
-            //if the attribute already has a value, append
-            if (element.hasAttribute(attributeName)) {
-                if (path.indexOf("self") !== -1) {
-                    attributeText =
-                        `${element.getAttribute(attributeName).trim()} ${attributeText}`
-                    ;
-                }
+        //if the attribute already has a value
+        if (element.hasAttribute(attributeName)) {
+            //if this is a self tag then append
+            if (path.indexOf("self") !== -1) {
+                attributeText =
+                    `${element.getAttribute(attributeName).trim()} ${attributeText}`
+                ;
             }
-            element.setAttribute(
-                attributeName
-                , attributeText
-            );
         }
+        //set the attribute
+        element.setAttribute(
+            attributeName
+            , attributeText
+        );
     }
+    /**
+    * Executes each expression and returns an array of results
+    * @function
+    */
+    function processMapExpression(expressionMap, context) {
+        var results = [];
+        //looping backwards through the expressions, add each one to the cleanText
+        Object.keys(expressionMap.expressions)
+        .forEach(
+            function executeExpression(index) {
+                var expression = expressionMap.expressions[index]
+                , result = expression.execute(
+                    context
+                    , {"quiet":true}
+                );
+                //if the result is an object then get the first true key
+                if (expression.type === "object") {
+                    result = getObjectResultKey(
+                        result
+                    );
+                }
 
+                results[index] = result;
+            }
+        );
+
+        return results;
+    }
+    /**
+    * Finds the first key where the value is truthy
+    * @function
+    */
+    function getObjectResultKey(resultObj) {
+        return Object.keys(resultObj)
+        .find(
+            function chooseKey(key) {
+                return resultObj[key];
+            }
+        );
+    }
     /**
     * Resolves the repeat expression, creats a context chain, and then processes
     * the childNodes for each iteration.
@@ -874,49 +888,101 @@ function _SimpleTemplate(
     * @function
     */
     function processTextNode(textNode, pathExprMap, context, path) {
-        //get the text node's value
-        var value =  textNode.nodeValue.replace(TRIM_PATT, "$1")
-        //process the value and see if we have any keys
-        , result = processValue(value, context)
-        //reference to the parent element
-        , parent = textNode.parentNode
-        //create/get an el tag to hold the text
-        , el = is_empty(value) && null
-            || parent.childNodes.length === 1 && parent
-            || createElement('span')
-        ;
-
-        if (!is_empty(value)) {
-            //replace the text node with the el
-            if (el !== parent) {
-                el.watchers = [];
-                parent.replaceChild(el, textNode);
-            }
-
-            //set the node value to the result
-            el.innerHTML = result.value
-                .replace(LN_END_PATT, "<br>")
-                .replace(SPC_PATT, "&nbsp;")
-                .replace(TAB_PATT, "&#9;");
-
-            //add the watchers
-            if (result.keys.length > 0) {
-                watchKeys(
-                    el
-                    , context
-                    , result.keys,
-                     function setText() {
-                        el.innerHTML =
-                            processValue(
-                                value
-                                , context
-                            )
-                            .value
-                        ;
-                    }
-                );
-            }
+        //ensure there is an expression map
+        if (!pathExprMap[path]) {
+            return;
         }
+        //reference to the parent element
+        var parent = textNode.parentNode
+        , expressionMap = pathExprMap[path]
+        //if the parent element has only one child, then it becomes the node
+        , textElement =
+            parent.childNodes.length === 1 && parent
+            //otherwise create a span cto contain it
+            || createElement('span')
+        , variables =
+            Object.values(expressionMap.expressions)
+            .map(
+                function mapExpressionVariables(expression) {
+                    return expression.variables
+                }
+            )
+            .flat()
+        ;
+        //replace the text node with the el
+        if (textElement !== parent) {
+            textElement.watchers = [];
+            parent.replaceChild(
+                textElement
+                , textNode
+            );
+        }
+        //set the initial value
+        setText(
+            context
+            , expressionMap
+            , textElement
+        );
+        //add the watchers
+        if (variables.length > 0) {
+            watchKeys(
+                textElement
+                , context
+                , variables
+                , setText.bind(
+                    null
+                    , context
+                    , expressionMap
+                    , textElement
+                )
+            );
+        }
+    }
+    /**
+    * @function
+    */
+    function setText(context, expressionMap, element) {
+        //run the expressions
+        var expressionResults = processMapExpression(
+            expressionMap
+            , context
+        )
+        , textValue = expressionMap.cleanText
+        ;
+        //loop through the text
+        Object.keys(expressionResults)
+        .reverse()
+        .forEach(
+            function appendToText(index) {
+                var result = expressionResults[index];
+                //if the result is nill and this is the only expression, remove the attribute
+                if (is_nill(result)) {
+                    return;
+                }
+                //if the result is a funciton then execute it
+                else if (
+                    is_func(result)
+                ) {
+                    result = result(
+                        context
+                    );
+                }
+                //otherwise add the result to the attribute text at the index position
+                else {
+                    textValue =
+                        textValue.substring(0, index)
+                        + result
+                        + textValue.substring(index)
+                    ;
+                }
+            }
+        );
+        //set the node value to the result
+        element.innerHTML = textValue
+            .replace(LN_END_PATT, "<br>")
+            .replace(SPC_PATT, "&nbsp;")
+            .replace(TAB_PATT, "&#9;")
+        ;
     }
     /**
     * Processes a text node inside a style tag
@@ -943,44 +1009,62 @@ function _SimpleTemplate(
 
         eventAttributes
         .forEach(
-            function forEachEventAttribute(eventAttribName) {
-                //get the expression map for this attribute
-                var eventAttribExprMap =
-                    expressionMap.attributes[eventAttribName]
-                //there should only be one expression
-                , exprKey = Object.keys(eventAttribExprMap.expressions)[0]
-                , eventHandlerExpr = eventAttribExprMap.expressions[exprKey]
-                , eventHandler = eventHandlerExpr.execute(
-                    context
-                )
-                , eventName = eventAttribName.substring(2)
-                , eventNamespace = `${namespace}.${eventName}`
-                ;
-                //add the handler
-                if (is_func(eventHandler)) {
-                    //put the user event manager in the middle
-                    userEventManager.on(
-                        eventNamespace
-                        , eventHandler
-                    );
-                    element.listenedEvents.push(
-                        eventNamespace
-                    );
-                    //if the event is not one of the handled ones then add a listener
-                    if (cnsts.handledEvents.indexOf(eventName) === -1) {
-                        element.addEventListener(
-                            eventName
-                            , function handleEvent(event) {
-                                userEventManager.handleExternalEvent(
-                                    namespace
-                                    , event
-                                );
-                            }
-                        );
-                    }
-                }
-            }
+            forEachEventAttribute.bind(
+                null
+                , namespace
+                , element
+                , context
+                , eventAttributes
+                , expressionMap
+            )
         );
+    }
+    /**
+    * @function
+    */
+    function forEachEventAttribute(namespace, element, context, eventAttributes, expressionMap, eventAttribName) {
+        //get the expression map for this attribute
+        var eventAttribExprMap =
+            expressionMap.attributes[eventAttribName]
+        //there should only be one expression
+        , exprKey = Object.keys(eventAttribExprMap.expressions)[0]
+        , eventHandlerExpr = eventAttribExprMap.expressions[exprKey]
+        , eventName = eventAttribName.substring(2)
+        , eventNamespace = `${namespace}.${eventName}`
+        , eventHandler = executeHandler.bind(
+            null
+            , eventHandlerExpr
+            , context
+        );
+        //put the user event manager in the middle
+        userEventManager.on(
+            eventNamespace
+            , eventHandler
+        );
+        element.listenedEvents.push(
+            eventNamespace
+        );
+    }
+    /**
+    * @function
+    */
+    function executeHandler(eventHandlerExpr, context, event) {
+        var eventHandler = eventHandlerExpr.execute(
+            context
+            , {"quiet":true}
+        );
+        //skip if not a function
+        if (!is_func(eventHandler)) {
+            return;
+        }
+        try {
+            eventHandler(
+                event
+            );
+        }
+        catch(ex) {
+            reporter.error(ex);
+        }
     }
 
     /**
@@ -1014,6 +1098,7 @@ function _SimpleTemplate(
         result.value = value.replace(
             TAG_PATT
             , function forEachMatch(tag, expr) {
+
                 var expr = simpleExpression(expr, context);
                 result.keys = result.keys.concat(expr.keys);
                 result.values.push(expr.result);
