@@ -40,5 +40,9 @@
         , "$toggleClass": [":TruJS.simpleViewSystem.scripts.simpleMethods._ToggleClass", []]
         , "$updStyle": [":TruJS.simpleViewSystem.scripts.simpleMethods._UpdateStyle", []]
         , "$delStyle": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteStyle", []]
+        , "$setState": [":TruJS.simpleViewSystem.scripts.simpleMethods._SetState", []]
+        , "$toggleState": [":TruJS.simpleViewSystem.scripts.simpleMethods._ToggleState", []]
+        , "$setValue": [":TruJS.simpleViewSystem.scripts.simpleMethods._SetValue", []]
+        , "$setProperty": [":TruJS.simpleViewSystem.scripts.simpleMethods._SetProperty", []]
     }]
 }
