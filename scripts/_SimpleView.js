@@ -171,13 +171,29 @@ function _SimpleView(
             view.stateContext = createStateContext(
                 view
             );
+            //if this is the first render, see if there are any contents
+            if (!view.grabbedContents && !!view.element.children.length > 0) {
+                view.originalContents = [...view.element.children];
+            }
+            view.grabbedContents = true;
             //clear the element contents
             view.element.innerHTML = "";
             //process the html and css templates
             processTemplates(
                 view
             );
-
+            //if there are contents then add those back
+            if (!!view.originalContents) {
+                view.originalContents
+                .forEach(
+                    function forEachElement(child) {
+                        view.element.appendChild(child);
+                        view.children.push(
+                            child
+                        );
+                    }
+                );
+            }
             return promise.resolve();
         }
         catch(ex) {
@@ -684,6 +700,8 @@ function _SimpleView(
         destroyChildren(view);
         //destroy any child views
         destroyViews(view);
+        //remove the original contents
+        delete view.originalContents;
         //run the context destroy method
         destroyContext(view);
         //remove the element
