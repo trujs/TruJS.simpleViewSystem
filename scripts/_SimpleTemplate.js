@@ -948,24 +948,26 @@ function _SimpleTemplate(
             , context
         )
         , textValue = expressionMap.cleanText
+        , isHybrid = expressionResults.length > 1
         ;
         //loop through the text
         Object.keys(expressionResults)
         .reverse()
         .forEach(
             function appendToText(index) {
-                var result = expressionResults[index];
-                //if the result is nill and this is the only expression, remove the attribute
-                if (is_nill(result)) {
-                    return;
-                }
-                //if the result is a funciton then execute it
-                else if (
+                var result = expressionResults[index]
+                ;
+                //if the result is a function execute it for the real result
+                if (
                     is_func(result)
                 ) {
                     result = result(
                         context
                     );
+                }
+                //if the result is nill and this is the only expression, remove the attribute
+                if (is_nill(result)) {
+                    return;
                 }
                 //otherwise add the result to the attribute text at the index position
                 else {
@@ -977,6 +979,12 @@ function _SimpleTemplate(
                 }
             }
         );
+        //if this is not a hybrid then
+        if (!isHybrid) {
+            if (textValue === "null" || textValue === "undefined") {
+                textValue = eval(textValue);
+            }
+        }
         //set the node value to the result
         element.innerHTML = textValue
             .replace(LN_END_PATT, "<br>")
@@ -1041,6 +1049,7 @@ function _SimpleTemplate(
             eventNamespace
             , eventHandler
         );
+        //
         element.listenedEvents.push(
             eventNamespace
         );
@@ -1049,14 +1058,17 @@ function _SimpleTemplate(
     * @function
     */
     function executeHandler(eventHandlerExpr, context, event) {
-        var eventHandler = eventHandlerExpr.execute(
-            context
-            , {"quiet":true}
-        );
+        var eventHandler = eventHandlerExpr
+            .execute(
+                context
+                , {"quiet":true}
+            )
+        ;
         //skip if not a function
         if (!is_func(eventHandler)) {
             return;
         }
+
         try {
             eventHandler(
                 event
@@ -1082,40 +1094,6 @@ function _SimpleTemplate(
             //}
         });
         return nodes;
-    }
-    /**
-    * Finds all {:expressions:}, evaluates them, and then replaces the
-    * {:expression:} with the result.
-    * @function
-    */
-    function processValue(value, context) {
-        var result = {
-            "keys": []
-            , "values": []
-            , "hybrid": !!value.replace(TAG_PATT, "")
-        };
-
-        result.value = value.replace(
-            TAG_PATT
-            , function forEachMatch(tag, expr) {
-
-                var expr = simpleExpression(expr, context);
-                result.keys = result.keys.concat(expr.keys);
-                result.values.push(expr.result);
-                if (is_object(expr.result) || is_func(expr.result)) {
-                    return "";
-                }
-                return expr.result;
-            }
-        );
-
-        if (!result.hybrid && result.values.length === 1) {
-            if (result.value === "null" || result.value === "undefined") {
-                result.values[0] = eval(result.value);
-            }
-        }
-
-        return result;
     }
     /**
     * Adds the watch `handler` for each key, if it's parent is a watcher

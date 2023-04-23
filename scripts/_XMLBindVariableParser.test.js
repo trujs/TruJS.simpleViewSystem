@@ -59,7 +59,7 @@ function xmlBindVariableParserTest1(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<svg xmlns="http://www.w3.org/2000/svg" class="diagram-canvas">\n    <circle/>\n    Text1 {:item.title:}\n    <g>\n        Text2\n        <svg>\n            {:item.subtitle:} Text3\n        </svg>\n        <style repeat="effectName,index,effect in shapeFormat.effects">\n            > use {\n                {:effectName:}:{:effect:};\n            }\n        </style>\n        {:item.label:}\n    </g>\n    Text4\n</svg>`)
+            .equals(`<svg xmlns="http://www.w3.org/2000/svg" class="diagram-canvas">\n    <circle/>\n    Text1 \n    <g>\n        Text2\n        <svg>\n             Text3\n        </svg>\n        <style repeat="effectName,index,effect in shapeFormat.effects">\n            > use {\n                :;\n            }\n        </style>\n        \n    </g>\n    Text4\n</svg>`)
             ;
 
             test("The path expression map should be")
@@ -135,7 +135,7 @@ function xmlBindVariableParserTest2(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<form>\n    <div class="image-comptiaLogo">\n    </div>\n    <h1>\n        {:title:}\n    </h1>\n    <h3>\n        {:subTitle:}\n    </h3>\n    <repeat expr="$k,$i,$field in fields">\n        <div class="field-group">\n            <label>{:$field.label:}</label>\n            <input required>\n        </div>\n    </repeat>\n</form>`)
+            .equals(`<form>\n    <div class="image-comptiaLogo">\n    </div>\n    <h1>\n        \n    </h1>\n    <h3>\n        \n    </h3>\n    <repeat expr="$k,$i,$field in fields">\n        <div class="field-group">\n            <label></label>\n            <input required>\n        </div>\n    </repeat>\n</form>`)
             ;
 
             test("The path expression map should be")
@@ -217,7 +217,7 @@ function xmlBindVariableParserTest3(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<self>\n    \n    <style if="shapeFormat.order !== -1">\n        order: {:shapeFormat.order:};\n    </style>\n    \n    <use width="100%" height="100%">\n    </use>\n    \n    <style repeat="effectName,index,effect in shapeFormat.effects">\n        > use {\n            {:effectName:}:{:effect:};\n        }\n    </style>\n    \n    <g></g>\n</self>`)
+            .equals(`<self>\n    \n    <style if="shapeFormat.order !== -1">\n        order: ;\n    </style>\n    \n    <use width="100%" height="100%">\n    </use>\n    \n    <style repeat="effectName,index,effect in shapeFormat.effects">\n        > use {\n            :;\n        }\n    </style>\n    \n    <g></g>\n</self>`)
             ;
 
             test("The path expression map should be")
@@ -267,7 +267,7 @@ function xmlBindVariableParserTest4(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<p>He exclaimed {:getResponse(dataId, "haza"):}</p>`)
+            .equals(`<p>He exclaimed </p>`)
             ;
 
             test("The path expression map should be")
@@ -366,22 +366,22 @@ function xmlBindVariableParserTest5(
                 '    <div class="image-comptiaLogo">\n' +
                 '    </div>\n' +
                 '    <h1>\n' +
-                '        {:title:}\n' +
+                '        \n' +
                 '    </h1>\n' +
                 '    <h3>\n' +
-                '        {:subTitle:}\n' +
+                '        \n' +
                 '    </h3>\n' +
                 '    <div repeat="$k,$i,$field in fields" class="field-group">\n' +
                 `        <label if="$field._type !== 'link'">\n` +
-                '            {:$field.label:}\n' +
+                '            \n' +
                 '        </label>\n' +
                 `        <input if="$field._type !== 'link'" required/>\n` +
                 '        <button else class="link-button" type="button">\n' +
-                '            {:$field.label:}\n' +
+                '            \n' +
                 '        </button>\n' +
                 '    </div>\n' +
                 '    <button class="continue-button" type="button" name="continue">\n' +
-                '        {:buttons.continue.label:}\n' +
+                '        \n' +
                 '    </button>\n' +
                 '</form>'
             );
@@ -390,6 +390,64 @@ function xmlBindVariableParserTest5(
             .value(pathExpressionMap)
             .stringify()
             .equals('{"$.[0]form":{"type":"tag","attributes":{"validate":{"type":"attribute","expressions":{"0":{"variables":["validateForm","$element","$validate"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[1]h1.[0]#text":{"type":"text","expressions":{"0":{"variables":["title"],"type":"variable"}},"cleanText":""},"$.[0]form.[2]h3.[0]#text":{"type":"text","expressions":{"0":{"variables":["subTitle"],"type":"variable"}},"cleanText":""},"$.[0]form.[3]div":{"type":"tag","attributes":{"id":{"type":"attribute","expressions":{"5":{"variables":["$k"],"type":"variable"}},"cleanText":"field"}}},"$.[0]form.[3]div.[0]label.[0]#text":{"type":"text","expressions":{"0":{"variables":["$field.label"],"type":"variable"}},"cleanText":""},"$.[0]form.[3]div.[1]input":{"type":"tag","attributes":{"name":{"type":"attribute","expressions":{"0":{"variables":["$k"],"type":"variable"}},"cleanText":""},"type":{"type":"attribute","expressions":{"0":{"variables":["$field._type"],"type":"variable"}},"cleanText":""},"placeholder":{"type":"attribute","expressions":{"0":{"variables":["$field.placeholder"],"type":"variable"}},"cleanText":""},"pattern":{"type":"attribute","expressions":{"0":{"variables":["$field._pattern"],"type":"variable"}},"cleanText":""},"autocomplete":{"type":"attribute","expressions":{"0":{"variables":["$field._type","password"],"type":"object"}},"cleanText":""},"set-focus":{"type":"attribute","expressions":{"0":{"variables":["setFocus","$element","$field.$focus"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[3]div.[2]button":{"type":"tag","attributes":{"name":{"type":"attribute","expressions":{"7":{"variables":["$k"],"type":"variable"}},"cleanText":"forgot-"},"set-focus":{"type":"attribute","expressions":{"0":{"variables":["setFocus","$element","$field.$focus"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[3]div.[2]button.[0]#text":{"type":"text","expressions":{"0":{"variables":["$field.label"],"type":"variable"}},"cleanText":""},"$.[0]form.[4]button":{"type":"tag","attributes":{"set-disabled":{"type":"attribute","expressions":{"0":{"variables":["setDisabled","$element","buttons.continue.$disabled"],"type":"execution"}},"cleanText":""},"set-focus":{"type":"attribute","expressions":{"0":{"variables":["setFocus","$element","buttons.continue.$focus"],"type":"execution"}},"cleanText":""}}},"$.[0]form.[4]button.[0]#text":{"type":"text","expressions":{"0":{"variables":["buttons.continue.label"],"type":"variable"}},"cleanText":""}}')
+            ;
+        }
+    );
+}
+/**
+* @test
+*   @title TruJS.simpleViewSystem.scripts._XMLBindVariableParser: regression,
+*/
+function xmlBindVariableParserTest6(
+    controller
+    , mock_callback
+) {
+    var xmlBindVariableParser, mockXml, pathExpressionMap, cleanMarkup;
+
+    arrange(
+        async function arrangeFn() {
+            xmlBindVariableParser = await controller(
+                [
+                    ":TruJS.simpleViewSystem.scripts._XMLBindVariableParser"
+                    , []
+                ]
+            );
+
+            mockXml = `<div>
+    x-coordinate: {:userEvent.pointer.xCoordinate:}<br/>
+    y-coordinate: {:userEvent.pointer.yCoordinate:}<br/>
+    over-ns: {:userEvent.pointer.overNs:}<br/>
+    focused-ns: {:userEvent.focus.inNs:}<br/>
+</div>`;
+        }
+    );
+
+    act(
+        function actFn() {
+            //destructure the result
+            (
+                {pathExpressionMap, cleanMarkup} = xmlBindVariableParser(
+                    mockXml
+                )
+            );
+        }
+    );
+
+    assert(
+        function assertFn(test) {
+            test("The cleanMarkup should be")
+            .value(cleanMarkup)
+            .equals('<div>\n' +
+              '    x-coordinate: <br/>\n' +
+              '    y-coordinate: <br/>\n' +
+              '    over-ns: <br/>\n' +
+              '    focused-ns: <br/>\n' +
+              '</div>');
+
+            test("The path expression map should be")
+            .value(pathExpressionMap)
+            .stringify()
+            .equals('{"$.[0]div.[0]#text":{"type":"text","expressions":{"14":{"variables":["userEvent.pointer.xCoordinate"],"type":"variable"}},"cleanText":"x-coordinate: "},"$.[0]div.[2]#text":{"type":"text","expressions":{"14":{"variables":["userEvent.pointer.yCoordinate"],"type":"variable"}},"cleanText":"y-coordinate: "},"$.[0]div.[4]#text":{"type":"text","expressions":{"9":{"variables":["userEvent.pointer.overNs"],"type":"variable"}},"cleanText":"over-ns: "},"$.[0]div.[6]#text":{"type":"text","expressions":{"12":{"variables":["userEvent.focus.inNs"],"type":"variable"}},"cleanText":"focused-ns: "}}')
             ;
         }
     );

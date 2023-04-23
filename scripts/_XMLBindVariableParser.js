@@ -331,9 +331,17 @@ function _XMLBindVariableParser(
                 //pocess any text gathered to this point
                 //if we have curtext this is a text token
                 if (!!curText) {
-                    tokens.push(
-                        `(${line},${c - curText.length})TAGTEXT:${curText}`
-                    );
+                    //if there isn't a tag name then
+                    if (openBeginTag === true) {
+                        tokens.push(
+                            `(${line},${c - curText.length})TAGNAME:${curText}`
+                        );
+                    }
+                    else {
+                        tokens.push(
+                            `(${line},${c - curText.length})TAGTEXT:${curText}`
+                        );
+                    }
                     //reset curtext for the next run
                     curText = "";
                 }
@@ -831,7 +839,8 @@ function _XMLBindVariableParser(
             }
             //if a bindexp in a text node then leave in place
             else if (tokenType === "BINDEXP") {
-                cleanMarkup+= `{:${tokenVal}:}`
+                cleanMarkup+= "<#text>";
+                continue;
             }
             //if a tag bind expression in a tag
             else if (tokenType === "TAGBINDEXP") {
