@@ -45,5 +45,7 @@ function _UpdateStyle(styleHelper, is_object, is_nill, is_event, is_empty) {
                 }
             });
         }
+
+        return true;
     };
 }

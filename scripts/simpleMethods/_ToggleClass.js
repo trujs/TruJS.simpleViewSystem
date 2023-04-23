@@ -24,5 +24,7 @@ function _ToggleClass(classHelper, is_nill, is_empty, is_event) {
                 classHelper.toggle(el, className);
             });
         }
+
+        return true;
     };
 }

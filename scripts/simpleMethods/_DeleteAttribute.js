@@ -24,5 +24,7 @@ function _DeleteAttribute(is_nill, is_empty, is_event) {
                 el.removeAttribute(attributeName);
             });
         }
+
+        return true;
     };
 }

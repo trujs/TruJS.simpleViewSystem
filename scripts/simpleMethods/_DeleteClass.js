@@ -24,5 +24,7 @@ function _DeleteClass(classHelper, is_nill, is_empty, is_event) {
                 classHelper.remove(el, className);
             });
         }
+
+        return true;
     };
 }

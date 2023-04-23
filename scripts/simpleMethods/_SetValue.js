@@ -26,5 +26,7 @@ function _SetValue(
                 el.value = value;
             });
         }
+
+        return true;
     };
 }

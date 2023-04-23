@@ -48,5 +48,7 @@ function _UpdateAttribute(is_event, is_object, is_nill, is_empty) {
                 }
             });
         }
+
+        return true;
     };
 }

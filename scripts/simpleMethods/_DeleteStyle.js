@@ -24,5 +24,7 @@ function _DeleteStyle(styleHelper, is_nill, is_empty, is_event) {
                 styleHelper.remove(el, styleName);
             });
         }
+
+        return true;
     };
 }

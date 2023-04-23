@@ -24,5 +24,7 @@ function _AddClass(classHelper, is_empty, is_nill, is_event) {
                 classHelper.add(el, className);
             });
         }
+
+        return true;
     };
 }
