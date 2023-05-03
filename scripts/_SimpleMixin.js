@@ -10,7 +10,7 @@ function _SimpleMixin(
 ) {
     var cnsts = {
         "value": "$value"
-        , "watch": "$watch"
+        , "watch": "$addListener"
     }
     /**
     * A regular expression pattern for replacing dashes
@@ -88,7 +88,7 @@ function _SimpleMixin(
     return function SimpleMixin(element, context) {
         //if there aren't any mixins then leave
         if (!mixins) {
-            return;
+            return Promise.resolve();
         }
 
         try {
@@ -139,8 +139,13 @@ function _SimpleMixin(
                     }
                     //add the watchers if there are any
                     else if (!!watchers) {
+                        if (!element.watchers) {
+                            element.watchers = [];
+                        }
                         element.watchers = element.watchers
-                            .concat(createWatchers(watchers, context));
+                            .concat(
+                                createWatchers(watchers, context)
+                            );
                     }
                 }
             });
