@@ -332,8 +332,10 @@ function _SimpleTemplate(
     * @function
     */
     function createContext(element, data) {
-        var properties = {};
-
+        var properties = {}
+        , contextPrototype
+        ;
+        //add the simple methods property descriptors
         Object.keys(simpleMethods)
         .forEach(
             function (key) {
@@ -359,6 +361,30 @@ function _SimpleTemplate(
             "enumerable": true
             , "value": data
         };
+        properties["$tagName"] = {
+            "enumerable": true
+            , "value": element.tagName
+        };
+        properties["$tagId"] = {
+            "enumerable": true
+            , "value": element.id
+        };
+        properties["$class"] = {
+            "enumerable": true
+            , "value": element.className
+        };
+        properties["$attributes"] = {
+            "enumerable": true
+            , "value": !!element.attributes
+                ? [...element.attributes]
+                : []
+        };
+
+        //we don't want to have the previous elements context as the prototype
+        contextPrototype = Object.getPrototypeOf(data);
+        if (!statenet_common_isStateful(contextPrototype)) {
+            contextPrototype = data;
+        }
 
         return Object.create(
             data
