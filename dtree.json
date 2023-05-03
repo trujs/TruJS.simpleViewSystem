@@ -26,6 +26,7 @@
     , "simpleExpression": [":TruJS.simpleViewSystem.scripts._SimpleExpression", []]
     , "simpleMixin": [":TruJS.simpleViewSystem.scripts._SimpleMixin", []]
     , "xmlBindVariableParser": [":TruJS.simpleViewSystem.scripts._XMLBindVariableParser", []]
+    , "styleCompiler": [":TruJS.simpleViewSystem.scripts._StyleCompiler", []]
     , "simpleTemplate": [":TruJS.simpleViewSystem.scripts._SimpleTemplate", []]
     , "simpleStyle": [":TruJS.simpleViewSystem.scripts._SimpleStyle", []]
     , "simpleView": [":TruJS.simpleViewSystem.scripts._SimpleView", []]
