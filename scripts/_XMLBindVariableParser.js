@@ -557,6 +557,8 @@ function _XMLBindVariableParser(
                 //if we are in an attribute
                 if (inAttrib) {
                     inAttrib = false;
+                    //remove the attribute name from the path
+                    xpath.pop();
                 }
                 //since this is not a leaf, we know it could have children
                 //add an entry to the map

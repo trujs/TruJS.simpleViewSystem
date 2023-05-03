@@ -59,7 +59,23 @@ function xmlBindVariableParserTest1(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<svg xmlns="http://www.w3.org/2000/svg" class="diagram-canvas">\n    <circle/>\n    Text1 \n    <g>\n        Text2\n        <svg>\n             Text3\n        </svg>\n        <style repeat="effectName,index,effect in shapeFormat.effects">\n            > use {\n                :;\n            }\n        </style>\n        \n    </g>\n    Text4\n</svg>`)
+            .equals('<svg xmlns="http://www.w3.org/2000/svg" class="diagram-canvas">\n' +
+              '    <circle/>\n' +
+              '    Text1 <#text>\n' +
+              '    <g>\n' +
+              '        Text2\n' +
+              '        <svg>\n' +
+              '            <#text> Text3\n' +
+              '        </svg>\n' +
+              '        <style repeat="effectName,index,effect in shapeFormat.effects">\n' +
+              '            > use {\n' +
+              '                <#text>:<#text>;\n' +
+              '            }\n' +
+              '        </style>\n' +
+              '        <#text>\n' +
+              '    </g>\n' +
+              '    Text4\n' +
+              '</svg>')
             ;
 
             test("The path expression map should be")
@@ -135,7 +151,22 @@ function xmlBindVariableParserTest2(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<form>\n    <div class="image-comptiaLogo">\n    </div>\n    <h1>\n        \n    </h1>\n    <h3>\n        \n    </h3>\n    <repeat expr="$k,$i,$field in fields">\n        <div class="field-group">\n            <label></label>\n            <input required>\n        </div>\n    </repeat>\n</form>`)
+            .equals('<form>\n' +
+              '    <div class="image-comptiaLogo">\n' +
+              '    </div>\n' +
+              '    <h1>\n' +
+              '        <#text>\n' +
+              '    </h1>\n' +
+              '    <h3>\n' +
+              '        <#text>\n' +
+              '    </h3>\n' +
+              '    <repeat expr="$k,$i,$field in fields">\n' +
+              '        <div class="field-group">\n' +
+              '            <label><#text></label>\n' +
+              '            <input required>\n' +
+              '        </div>\n' +
+              '    </repeat>\n' +
+              '</form>')
             ;
 
             test("The path expression map should be")
@@ -217,7 +248,23 @@ function xmlBindVariableParserTest3(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<self>\n    \n    <style if="shapeFormat.order !== -1">\n        order: ;\n    </style>\n    \n    <use width="100%" height="100%">\n    </use>\n    \n    <style repeat="effectName,index,effect in shapeFormat.effects">\n        > use {\n            :;\n        }\n    </style>\n    \n    <g></g>\n</self>`)
+            .equals( '<self>\n' +
+              '    \n' +
+              '    <style if="shapeFormat.order !== -1">\n' +
+              '        order: <#text>;\n' +
+              '    </style>\n' +
+              '    \n' +
+              '    <use width="100%" height="100%">\n' +
+              '    </use>\n' +
+              '    \n' +
+              '    <style repeat="effectName,index,effect in shapeFormat.effects">\n' +
+              '        > use {\n' +
+              '            <#text>:<#text>;\n' +
+              '        }\n' +
+              '    </style>\n' +
+              '    \n' +
+              '    <g></g>\n' +
+              '</self>')
             ;
 
             test("The path expression map should be")
@@ -267,7 +314,7 @@ function xmlBindVariableParserTest4(
 
             test("The cleanMarkup should be")
             .value(cleanMarkup)
-            .equals(`<p>He exclaimed </p>`)
+            .equals(`<p>He exclaimed <#text></p>`)
             ;
 
             test("The path expression map should be")
@@ -363,27 +410,27 @@ function xmlBindVariableParserTest5(
             .value(cleanMarkup)
             .equals(
                 '<form>\n' +
-                '    <div class="image-comptiaLogo">\n' +
-                '    </div>\n' +
-                '    <h1>\n' +
-                '        \n' +
-                '    </h1>\n' +
-                '    <h3>\n' +
-                '        \n' +
-                '    </h3>\n' +
-                '    <div repeat="$k,$i,$field in fields" class="field-group">\n' +
-                `        <label if="$field._type !== 'link'">\n` +
-                '            \n' +
-                '        </label>\n' +
-                `        <input if="$field._type !== 'link'" required/>\n` +
-                '        <button else class="link-button" type="button">\n' +
-                '            \n' +
-                '        </button>\n' +
-                '    </div>\n' +
-                '    <button class="continue-button" type="button" name="continue">\n' +
-                '        \n' +
-                '    </button>\n' +
-                '</form>'
+              '    <div class="image-comptiaLogo">\n' +
+              '    </div>\n' +
+              '    <h1>\n' +
+              '        <#text>\n' +
+              '    </h1>\n' +
+              '    <h3>\n' +
+              '        <#text>\n' +
+              '    </h3>\n' +
+              '    <div repeat="$k,$i,$field in fields" class="field-group">\n' +
+              `        <label if="$field._type !== 'link'">\n` +
+              '            <#text>\n' +
+              '        </label>\n' +
+              `        <input if="$field._type !== 'link'" required/>\n` +
+              '        <button else class="link-button" type="button">\n' +
+              '            <#text>\n' +
+              '        </button>\n' +
+              '    </div>\n' +
+              '    <button class="continue-button" type="button" name="continue">\n' +
+              '        <#text>\n' +
+              '    </button>\n' +
+              '</form>'
             );
 
             test("The path expression map should be")
@@ -438,16 +485,71 @@ function xmlBindVariableParserTest6(
             test("The cleanMarkup should be")
             .value(cleanMarkup)
             .equals('<div>\n' +
-              '    x-coordinate: <br/>\n' +
-              '    y-coordinate: <br/>\n' +
-              '    over-ns: <br/>\n' +
-              '    focused-ns: <br/>\n' +
+              '    x-coordinate: <#text><br/>\n' +
+              '    y-coordinate: <#text><br/>\n' +
+              '    over-ns: <#text><br/>\n' +
+              '    focused-ns: <#text><br/>\n' +
               '</div>');
 
             test("The path expression map should be")
             .value(pathExpressionMap)
             .stringify()
             .equals('{"$.[0]div.[0]#text":{"type":"text","expressions":{"14":{"variables":["userEvent.pointer.xCoordinate"],"type":"variable"}},"cleanText":"x-coordinate: "},"$.[0]div.[2]#text":{"type":"text","expressions":{"14":{"variables":["userEvent.pointer.yCoordinate"],"type":"variable"}},"cleanText":"y-coordinate: "},"$.[0]div.[4]#text":{"type":"text","expressions":{"9":{"variables":["userEvent.pointer.overNs"],"type":"variable"}},"cleanText":"over-ns: "},"$.[0]div.[6]#text":{"type":"text","expressions":{"12":{"variables":["userEvent.focus.inNs"],"type":"variable"}},"cleanText":"focused-ns: "}}')
+            ;
+        }
+    );
+}
+/**
+* @test
+*   @title TruJS.simpleViewSystem.scripts._XMLBindVariableParser: regression, attribute no value
+*/
+function xmlBindVariableParserTest7(
+    controller
+    , mock_callback
+) {
+    var xmlBindVariableParser, mockXml, pathExpressionMap, cleanMarkup;
+
+    arrange(
+        async function arrangeFn() {
+            xmlBindVariableParser = await controller(
+                [
+                    ":TruJS.simpleViewSystem.scripts._XMLBindVariableParser"
+                    , []
+                ]
+            );
+
+            mockXml = [
+                "<div id='dialog1' ctia-portal-dialog>"
+                , "{:title:}"
+                , "</div>"
+                , "<div id='dialog2' ctia-portal-dialog='dialog'>"
+                , "{:title:}"
+                , "</div>"
+            ].join("");
+        }
+    );
+
+    act(
+        function actFn() {
+            //destructure the result
+            (
+                {pathExpressionMap, cleanMarkup} = xmlBindVariableParser(
+                    mockXml
+                )
+            );
+        }
+    );
+
+    assert(
+        function assertFn(test) {
+            test("The cleanMarkup should be")
+            .value(cleanMarkup)
+            .equals('<div id="dialog1" ctia-portal-dialog><#text></div><div id="dialog2" ctia-portal-dialog="dialog"><#text></div>');
+
+            test("The path expression map should be")
+            .value(pathExpressionMap)
+            .stringify()
+            .equals('{"$.[0]div.[0]#text":{"type":"text","expressions":{"0":{"variables":["title"],"type":"variable"}},"cleanText":""},"$.[1]div.[0]#text":{"type":"text","expressions":{"0":{"variables":["title"],"type":"variable"}},"cleanText":""}}')
             ;
         }
     );
