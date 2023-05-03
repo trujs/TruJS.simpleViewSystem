@@ -969,13 +969,42 @@ function _SimpleTemplate(
     */
     function setText(context, expressionMap, element) {
         //run the expressions
+        var isHybrid = expressionMap.cleanText
+            .trim()
+            .length > 1
+        , textValue = getExpressionText(
+            context
+            , expressionMap
+        )
+        ;
+        //if this is not a hybrid then
+        if (!isHybrid) {
+            if (textValue === "null") {
+                textValue = null;
+            }
+            else if (textValue === "undefined") {
+                textValue = undefined;
+            }
+        }
+        //set the node value to the result
+        element.innerHTML = textValue
+            .replace(LN_END_PATT, "<br>")
+            .replace(SPC_PATT, "&nbsp;")
+            .replace(TAB_PATT, "&#9;")
+        ;
+    }
+    /**
+    * @function
+    */
+    function getExpressionText(context, expressionMap) {
         var expressionResults = processMapExpression(
             expressionMap
             , context
         )
-        , textValue = expressionMap.cleanText
-        , isHybrid = expressionResults.length > 1
-        ;
+        , textValue = expressionMap.cleanText.replace(
+            /\<\#text\>/g
+            , ""
+        );
         //loop through the text
         Object.keys(expressionResults)
         .reverse()
@@ -1005,18 +1034,8 @@ function _SimpleTemplate(
                 }
             }
         );
-        //if this is not a hybrid then
-        if (!isHybrid) {
-            if (textValue === "null" || textValue === "undefined") {
-                textValue = eval(textValue);
-            }
-        }
-        //set the node value to the result
-        element.innerHTML = textValue
-            .replace(LN_END_PATT, "<br>")
-            .replace(SPC_PATT, "&nbsp;")
-            .replace(TAB_PATT, "&#9;")
-        ;
+
+        return textValue;
     }
     /**
     * Processes a text node inside a style tag
