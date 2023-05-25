@@ -13,8 +13,7 @@
 * @factory
 */
 function _SimpleTemplate(
-    promise
-    , simpleExpression
+    simpleExpression
     , expression_interface
     , simpleMethods
     , simpleMixin
@@ -22,6 +21,7 @@ function _SimpleTemplate(
     , xmlBindVariableParser
     , app_subsystem_userInterface_userEventManager
     , statenet_common_findStateful
+    , statenet_common_isStateful
     , dom_createElement
     , dom_createTextNode
     , is_array
@@ -38,11 +38,13 @@ function _SimpleTemplate(
 ) {
     var TAG_PATT = /\{\:(.*?)\:\}/g
     , WSP_PATT = /^[ \t\n\r]+$/
-    , TRIM_PATT = /^[\n\r\t ]+(.*?)[\n\r\t ]+$/
+    , TRIM_PATT = /^[\n\r\t ]+(.*?)[\n\r\t ]+$/gm
     , LN_END_PATT = /\r?\n/g
     , SPC_PATT = /[ ][ ]+/g
     , TAB_PATT = /\t/g
     , INDXR_PATT = /\[\]/g
+    , TEXT_PLACEHOLDER_PATT = /\<\#text\>/g
+    , ESCAPED_TEXT_PLACEHOLDER_PATT = /\#\&lt\;\#text\&gt\;/g
     , cnsts = {
         "value": "$value"
         , "destroy": "$destroy"
@@ -992,6 +994,7 @@ function _SimpleTemplate(
         }
         //set the node value to the result
         element.innerHTML = textValue
+            .trim()
             .replace(LN_END_PATT, "<br>")
             .replace(SPC_PATT, "&nbsp;")
             .replace(TAB_PATT, "&#9;")
@@ -1005,10 +1008,16 @@ function _SimpleTemplate(
             expressionMap
             , context
         )
-        , textValue = expressionMap.cleanText.replace(
-            /\<\#text\>/g
-            , ""
-        );
+        , textValue = expressionMap.cleanText
+            .replace(
+                TEXT_PLACEHOLDER_PATT
+                , ""
+            )
+            .replace(
+                ESCAPED_TEXT_PLACEHOLDER_PATT
+                , ""
+            )
+        ;
         //loop through the text
         Object.keys(expressionResults)
         .reverse()
@@ -1046,16 +1055,45 @@ function _SimpleTemplate(
     * @function
     */
     function processStyleTextNode(textNode, pathExprMap, context, path) {
-        var newStyleElement =
-            simpleStyle(
-                textNode.nodeValue.replace(TRIM_PATT, "$1")
-                , context
+        var expressionMap = pathExprMap[path]
+        , variables =
+            Object.values(expressionMap.expressions)
+            .map(
+                function mapExpressionVariables(expression) {
+                    return expression.variables
+                }
             )
-        , parentStyleElement = textNode.parentNode
+            .flat()
+        , styleNode = textNode.parentNode
         ;
-        parentStyleElement.innerHTML = "";
-        parentStyleElement.appendChild(
-            newStyleElement.childNodes[0]
+        //set the initial style text
+        setStyleText(
+            styleNode
+            , expressionMap
+            , context
+        );
+        //add the watchers
+        if (variables.length > 0) {
+            watchKeys(
+                textNode
+                , context
+                , variables
+                , setStyleText.bind(
+                    null
+                    , styleNode
+                    , expressionMap
+                    , context
+                )
+            );
+        }
+    }
+    /**
+    * @function
+    */
+    function setStyleText(styleNode, expressionMap, context) {
+        styleNode.innerHTML = getExpressionText(
+            context
+            , expressionMap
         );
     }
     /**
