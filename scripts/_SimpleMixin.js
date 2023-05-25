@@ -82,23 +82,23 @@ function _SimpleMixin(
         return watcherObjs;
     }
 
+    return SimpleMixin;
+
     /**
     * @worker
     */
-    return function SimpleMixin(element, context) {
+    function SimpleMixin(element, context) {
         //if there aren't any mixins then leave
         if (!mixins) {
-            return Promise.resolve();
+            return;
         }
 
-        try {
-            //get a key value store for the attributes
-            var attribs = getAttributes(element)
-            , proc = Promise.resolve()
-            ;
+        //get a key value store for the attributes
+        var attribs = getAttributes(element);
 
-            //loop through the attributes looking for the mixins
-            Object.keys(attribs).forEach(function forEachAttr(key) {
+        //loop through the attributes looking for the mixins
+        Object.keys(attribs).forEach(
+            function forEachAttr(key) {
                 var path = key.replace(DASH_PATT, ".")
                 , ref = utils_reference(
                     path
@@ -115,30 +115,7 @@ function _SimpleMixin(
                             , context
                         )
                     ;
-                    //if the mixin controller returns a promise then wait for it to resolve
-                    if (is_promise(watchers)) {
-                        proc = proc
-                        .then(
-                            function thenWaitForResolve() {
-                                return watchers;
-                            }
-                        )
-                        .then(
-                            function thenAddResultingWatchers(watchers) {
-                                if (!!watchers) {
-                                    element.watchers = element.watchers
-                                        .concat(
-                                            createWatchers(
-                                                watchers
-                                                , context
-                                            )
-                                        );
-                                }
-                            }
-                        );
-                    }
-                    //add the watchers if there are any
-                    else if (!!watchers) {
+                    if (!!watchers) {
                         if (!element.watchers) {
                             element.watchers = [];
                         }
@@ -148,12 +125,7 @@ function _SimpleMixin(
                             );
                     }
                 }
-            });
-
-            return proc;
-        }
-        catch(ex) {
-            return Promise.reject(ex);
-        }
-    };
+            }
+        );
+    }
 }
