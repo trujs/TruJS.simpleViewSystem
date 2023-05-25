@@ -10,6 +10,9 @@ function CreateSimpleNamespace(parentNamespace, node, options = {}) {
         if (node.hasAttribute("view-ns")) {
             return node.getAttribute("view-ns");
         }
+        if (node.hasAttribute("view-name")) {
+            return `${parentNamespace}.${node.getAttribute("view-name")}`;
+        }
         //if there is a view-state-id use that
         if (node.hasAttribute("view-state-id")) {
             return `${parentNamespace}.${node.getAttribute("view-state-id")}`;

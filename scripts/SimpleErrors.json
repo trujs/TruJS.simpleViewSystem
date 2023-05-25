@@ -10,4 +10,5 @@
     , "invalid_tag_contents": "[Invalid tag contents] The XML tag has an invalid character within it's delimeters <>"
     , "unmatched_end_tag": "[Unmatched End Tag] An end tag was encountered but it does not match the current tag"
     , "empty_bind_variable": "[Empty Bind Variable] A bind variable signature was found, but ther wasn't anything in it"
+    , "viewNamespaceExists": "[View Namespace Exists] An element using the view-name attribute is using an existing namespace"
 }

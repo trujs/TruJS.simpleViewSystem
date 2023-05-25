@@ -45,6 +45,7 @@ function _SimpleView(
             "namespace": "view-ns"
             , "controller": "view-controller"
             , "stateId": "view-state-id"
+            , "name": "view-name"
         }
     }
     /**
