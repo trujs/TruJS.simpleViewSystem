@@ -347,43 +347,42 @@ function _SimpleTemplate(
             function (key) {
                 properties[key] = {
                     "enumberable": true
-                    , "value": simpleMethods[key].bind(null, element)
+                    , "value": simpleMethods[key]
+                        .bind(
+                            null
+                            , element
+                        )
                 };
             }
         );
-
         //set the element on the context
         properties["$element"] = {
             "enumerable": true
-            , "value": element
-        };
-
-        properties["$state"] = {
-            "enumerable": true
-            , "value": findStateful(data)
-        };
-
-        properties["$"] = {
-            "enumerable": true
-            , "value": data
-        };
-        properties["$tagName"] = {
-            "enumerable": true
-            , "value": element.tagName
-        };
-        properties["$tagId"] = {
-            "enumerable": true
-            , "value": element.id
+            , "get": function get() {
+                return element;
+            }
         };
         properties["$class"] = {
             "enumerable": true
-            , "value": element.className
+            , "get": function get() {
+                return element.className;
+            }
         };
         properties["$attributes"] = {
             "enumerable": true
-            , "value": !!element.attributes
-                ? [...element.attributes]
-                : []
+            , "get": function get() {
+                return !!element.attributes
+                    ? [...element.attributes]
+                    : []
+            }
+        };
+        properties["$$"] = {
+            "enumerable": true
+            , "value": findStateful(data)
+        };
+        properties["$"] = {
+            "enumerable": true
+            , "value": data
         };
 
         //we don't want to have the previous elements context as the prototype
