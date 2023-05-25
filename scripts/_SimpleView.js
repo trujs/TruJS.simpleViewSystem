@@ -34,6 +34,8 @@ function _SimpleView(
     , DASH_PATT = /[-]/g
     , DOT_PATT = /[.]/g
     , TAG_PATT = /\{([^}]+)\}/g
+    , ORIGINAL_CONTENT_NODE_NAME = "original-content"
+    , HTML_TAG_PATT = /[<]([A-z0-9_-]+)/g
     , cnsts = {
         "destroy": "$destroy"
         , "watch": "$addListener"
@@ -151,10 +153,10 @@ function _SimpleView(
     /**
     * @function
     */
-    function setupView(view, template, context) {
+    async function setupView(view, template, context) {
         try {
             //set or reset the view
-            resetView(
+            await resetView(
                 view
                 , template
                 , context
@@ -163,29 +165,26 @@ function _SimpleView(
             view.stateContext = createStateContext(
                 view
             );
-            //if this is the first render, see if there are any contents
-            if (!view.grabbedContents && !!view.element.children.length > 0) {
-                view.originalContents = [...view.element.children];
-            }
-            view.grabbedContents = true;
             //clear the element contents
             view.element.innerHTML = "";
             //process the html and css templates
             processTemplates(
                 view
             );
-            //if there are contents then add those back
+            //if there are original contents
             if (!!view.originalContents) {
-                view.originalContents
-                .forEach(
-                    function forEachElement(child) {
-                        view.element.appendChild(child);
-                        view.children.push(
-                            child
-                        );
-                    }
+                addBackOriginalElements(
+                    view
                 );
             }
+            //remove the dialog content node regardless if we have original
+            var contentNode =
+                view.element.querySelector(ORIGINAL_CONTENT_NODE_NAME)
+            ;
+            if (!!contentNode) {
+                contentNode.parentNode.removeChild(contentNode);
+            }
+
             return promise.resolve();
         }
         catch(ex) {
@@ -193,11 +192,34 @@ function _SimpleView(
         }
     }
     /**
+    * @function
+    */
+    function addBackOriginalElements(view) {
+        //if there is a content node then use that as the insert before element
+        var contentNode = view.element.querySelector(ORIGINAL_CONTENT_NODE_NAME)
+        , originalNodes = view.originalContents
+        , parentNode = view.element
+        ;
+        for (let i = 0, len = originalNodes.length; i < len; i++) {
+            if (!!contentNode) {
+                contentNode.parentNode.insertBefore(
+                    originalNodes[i]
+                    , contentNode
+                );
+            }
+            else {
+                parentNode.appendChild(
+                    originalNodes[i]
+                );
+            }
+        }
+    }
+    /**
     * Sets or resets the view context and template along with destroying any
     * child elements and child views
     * @function
     */
-    function resetView(view, template, context) {
+    async function resetView(view, template, context) {
         //destroy the old context if we have a new one
         if (!!context) {
             if (!!view.context) {
@@ -234,6 +256,57 @@ function _SimpleView(
         if (is_array(view.htmlTemplate)) {
             view.htmlTemplate = view.htmlTemplate.join("\n\n");
         }
+
+        //get a list of the tag namess that point to views
+        view.childViewNames = await getChildViewNames(
+            view.htmlTemplate
+        );
+        //get the state for any child views so they can be listened to
+
+        ///TODO: get the child view state ids, so we can pre load the child
+        ///      states in case the view needs to add listeners to child state
+        ///      IDs
+        
+    }
+    /**
+    * @function
+    */
+    async function getChildViewNames(template) {
+        //get the tag names from the tempalte
+        var matches = [
+            ...template.matchAll(HTML_TAG_PATT)
+        ]
+        //get a distinct list of the tag names
+        , distinctMatches =
+            matches.filter(
+                function distinct(item, index, ar) {
+                    return ar.indexOf(item) === index;
+                }
+            )
+        , childViewNames = []
+        ;
+        //get a list of matches that have a view entry
+        for (let i = 0, len = matches.length, match, name; i < len; i++) {
+            match = matches[i];
+            name = match[1].replace(/-/g, ".");
+            if (
+                await resolve$(
+                    [
+                       `.views.${name}`
+                       , {
+                           "quiet": true
+                           , "caseInsensitive": true
+                       }
+                    ]
+                )
+            ) {
+                childViewNames.push(
+                    name
+                );
+            }
+        }
+
+        return childViewNames;
     }
     /**
     * Processes the html and css templates
@@ -287,7 +360,7 @@ function _SimpleView(
     /**
     * @function
     */
-    function processChildElement(parentNamespace, parentState, childEl) {
+    async function processChildElement(parentNamespace, parentState, childEl) {
         //if this is a text node, skip all of this
         if (childEl.nodeType !== 1) {
             return ;
@@ -296,58 +369,52 @@ function _SimpleView(
         , ctrlName = childEl.hasAttribute(cnsts.viewAttributeNames.controller)
             ? childEl.getAttribute(cnsts.viewAttributeNames.controller)
             : getElementName(childEl).replace(/-/g, ".")
-        ;
         //try to find a controller
-        return getController(
+        , controller = await getController(
             ctrlName
         )
-        //then if there was a controller, process the view
-        .then(
-            function thenProcessView(controller) {
-                if (is_func(controller)) {
-                    //process the child view
-                    return processChildView(
-                        parentNamespace
-                        , tagName
-                        , parentState
-                        , childEl
-                        , controller
-                    );
-                }
-                return promise.resolve();
+        //if there is a controller, process the child view
+        , childView = is_func(controller)
+            && (await processChildView(
+                parentNamespace
+                , tagName
+                , parentState
+                , childEl
+                , controller
+            ))
+        //otherwise process any children and collect the sub views
+        , childSubViews = !childView
+            && childEl.childNodes.length > 0
+            && (await processChildElements(
+                parentNamespace
+                , Array.from(childEl.childNodes)
+                , parentState
+            ))
+        , viewName, viewNs, viewNsSelector
+        ;
+        //if a view was generated, return that
+        if (!!childView) {
+            return childView;
+        }
+        //set the view-ns attribute if there is a view-name
+        viewName = childEl.getAttribute(cnsts.viewAttributeNames.name);
+        if (!!viewName) {
+            viewNs = `${parentNamespace}.${viewName}`;
+            viewNsSelector =
+                `[${cnsts.viewAttributeNames.namespace}='${viewNs}']`;
+            //verify the view namespace does not already exist
+            if (!!document.body.querySelector(viewNsSelector)) {
+                throw new Error(
+                    `${simpleErrors.viewNamespaceExists} (${viewNs})`
+                );
             }
-        )
-        //then execute any mixins
-        .then (
-            function thenExecuteMixins(view) {
-                //if the view is null then we need to process any mixins for this element
-                if (!view) {
-                    return processMixins(
-                        childEl
-                        , parentState
-                    );
-                }
-                return promise.resolve(view);
-            }
-        )
-        //then if there wasn't a view then process the child elements
-        .then(
-            function thenProcessChildElements(result) {
-                //if the result is an object then it's a view
-                if (is_object(result)) {
-                    //return the resulting view
-                    return promise.resolve(result);
-                }
-                //otherwise process any children
-                if (childEl.childNodes.length > 0) {
-                    return processChildElements(
-                        parentNamespace
-                        , Array.from(childEl.childNodes)
-                        , parentState
-                    );
-                }
-            }
-        );
+            childEl.setAttribute(
+                cnsts.viewAttributeNames.namespace
+                , viewNs
+            );
+        }
+
+        return childSubViews;
     }
     /**
     * @function
@@ -419,14 +486,16 @@ function _SimpleView(
     */
     function processChildResults(results) {
         var views = [];
-        //loop through the results, each member is a result of processing an element
+        //loop through the results, each member is a result of processing an
+        // element
         results.forEach(
             function forEachChildResult(childResult) {
                 //if this is an object, it's a child view
                 if (is_object(childResult)) {
                     views.push(childResult);
                 }
-                //if this is an array then it's results from processing the child's child elements
+                //if this is an array then its results from processing the
+                // child's child elements
                 else if (is_array(childResult)) {
                     views = views.concat(
                         processChildResults(
@@ -459,33 +528,47 @@ function _SimpleView(
     * Attempts to resolve the controller, swallowing any errors
     * @function
     */
-    function getController(name) {
+    async function getController(name) {
         //if this name is in the no controllers list, skip it
         if (noControllers.indexOf(name) !== -1) {
-            return promise.resolve(null);
+            return null;
         }
-        //resolve the controller for ${name}
-        return resolve$(
+        //see if there is a view definition for this name
+        var viewDefinition = await resolve$(
             [
-               `.views.${name}.controller`
+               `.views.${name}`
                , {
                    "quiet": true
                    , "caseInsensitive": true
                }
             ]
-        )
-        .then(
-            function thenFinalResolveCheck(controller) {
-                if (!!controller && is_func(controller)) {
-                    return promise.resolve(controller);
-                }
-                //if the controller wasn't found or not a controller then we _shouldn't_ try to look it up again
-                noControllers.push(
-                    name
-                );
-                return promise.resolve();
-            }
         );
+        if (!!viewDefinition) {
+            //no controller, use the default controller
+            if (!viewDefinition.controller) {
+                viewDefinition.controller =
+                    (
+                        await resolve$(
+                            [
+                                ".simpleDefaultController"
+                            ]
+                        )
+                    ) (
+                        viewDefinition.template
+                        , viewDefinition.style
+                    )
+                ;
+            }
+            //
+            if (!!viewDefinition.controller && is_func(viewDefinition.controller)) {
+                return viewDefinition.controller;
+            }
+        }
+        //if the controller wasn't found or not a controller then we _shouldn't_ try to look it up again
+        noControllers.push(
+            name
+        );
+        return;
     }
     /**
     * Appends the elements to the element parent
@@ -500,83 +583,79 @@ function _SimpleView(
     * Gets the property from the state that matches the id
     * @function
     */
-    function getChildState(stateId, tagName, parentState) {
+    async function getChildState(stateId, tagName, parentState) {
         try {
             //create the view path from the tag name
             var viewPath = tagName.replace(DASH_PATT, ".")
-            , defaultViewState
-            ;
-            //see if there is a default state for this view's tag
-            return resolve$(
+            //get the view's default state
+            , defaultViewState = await resolve$(
                 [
                     `.views.${viewPath}.defaultState`
                     , {"quiet": true}
                 ]
             )
-            //see if the view state is already on the state manager
-            .then(
-                function thenCheckParentState(defaultState) {
-                    //record the returned default state (could be nill)
-                    if (!!defaultState) {
-                        defaultViewState = utils_copy(defaultState);
-                    }
-                    //see if the child state already exists on the parent
-                    var childState = utils_lookup(
-                        stateId
-                        , parentState
-                    );
-                    //if it exists return that
-                    if (!!childState) {
-                        return promise.resolve(childState);
-                    }
-                    //return the default state
-                    return promise.resolve();
-                }
+            //get the view's state
+            , viewState = await resolve$(
+                [
+                    `.views.${viewPath}.state`
+                    , {"quiet": true}
+                ]
             )
-            //resolve the state from the ioc system if not found
-            .then(
-                function thenResolveViewState(childState) {
-                    //redirect if child state found
-                    if (!!childState) {
-                        return promise.resolve(childState);
-                    }
-                    //otherwise lookup in the IOC
-                    return resolve$(
-                        [
-                            `.views.${viewPath}.state`
-                            , {"quiet": true}
-                        ]
-                    );
-                }
+            //get the current child's state from the parent
+            , childState = utils_lookup(
+                stateId
+                , parentState
             )
-            //then add this to the parent state
-            .then(
-                function thenAddtoParent(childState) {
-                    if (!!defaultViewState) {
-                        //if there is a childState and defaultViewState then combine it with the default
-                        if (!!childState) {
-                            utils_update(
-                                childState
-                                , defaultViewState
-                            );
-                        }
-                        //otherwise if the default state exists then set that as the childState
-                        else {
-                            childState = defaultViewState;
-                        }
-                    }
-                    //if there isn't a child state, just use an empty object
-                    if (!childState) {
-                        childState = {};
-                    }
-                    //add the child state to the parent
-                    return addStateByPath(
-                        parentState
-                        , stateId
-                        , childState
+            ;
+            //build up the state
+            //start by adding the default state, we'll want to update the
+            //  current state if it exists so we keep the state manager
+            //  reference
+            if (!!defaultViewState) {
+                //if there is a childState and defaultViewState then combine it with the default
+                if (!!childState) {
+                    utils_update(
+                        childState
+                        , utils_copy(
+                            defaultViewState
+                        )
                     );
                 }
+                //otherwise if the default state exists then set that as the childState
+                else {
+                    childState = utils_copy(
+                        defaultViewState
+                    );
+                }
+            }
+            //add the view state if it exists
+            if (!!viewState) {
+                //we should update the current state
+                if (!!childState) {
+                    utils_update(
+                        childState
+                        , utils_copy(
+                            viewState
+                        )
+                    );
+                }
+                else {
+                    childState = utils_copy(
+                        viewState
+                    );
+                }
+            }
+            //if there isn't a child state, just use an empty object
+            if (!childState) {
+                childState = {};
+            }
+            //add the child state to the parent
+            return addStateByPath(
+                parentState
+                , stateId
+                , childState
             );
+
         }
         catch(ex) {
             return promise.reject(ex);
@@ -872,6 +951,9 @@ function _SimpleView(
                 , "state": state
                 , "controller": controller
                 , "attributes": getAttributes(element)
+                , "originalContents": element.children.length > 0
+                    ? [...element.children]
+                    : null
                 , "children": []
                 , "views": []
                 , "watchers": []
