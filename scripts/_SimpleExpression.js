@@ -178,7 +178,7 @@ function _SimpleExpression(
             var keys = Object.keys(coll)
             , isAr = is_array(coll)
             , filtered = isAr && [] || {}
-            , properties
+            , properties = {}
             ;
 
             keys.forEach(function forEachKey(key, indx) {
