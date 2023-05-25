@@ -9,7 +9,7 @@ function _SimpleView(
     , simpleTemplate
     , simpleErrors
     , simpleStyle
-    , simpleMixin
+    , document
     , reporter
     , is_array
     , is_object
@@ -108,15 +108,6 @@ function _SimpleView(
             view
             , template
             , context
-        )
-        //then process any mixins
-        .then(
-            function thenProcessMixins() {
-                return processMixins(
-                    view.element
-                    , view.stateContext
-                );
-            }
         )
         //then process any child elements
         .then(
@@ -447,15 +438,6 @@ function _SimpleView(
         );
 
         return views;
-    }
-    /**
-    * @function
-    */
-    function processMixins(element, state) {
-        return simpleMixin(
-            element
-            , state
-        );
     }
 
     /**

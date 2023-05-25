@@ -17,7 +17,7 @@ function _SimpleTemplate(
     , simpleExpression
     , expression_interface
     , simpleMethods
-    , simpleStyle
+    , simpleMixin
     , createSimpleNamespace
     , xmlBindVariableParser
     , app_subsystem_userInterface_userEventManager
@@ -301,7 +301,11 @@ function _SimpleTemplate(
                         , pathExprMap[path]
                     );
                 }
-
+                //process any mixins
+                simpleMixin(
+                    element
+                    , context
+                );
                 //process the element's children
                 processChildren(
                     namespace
