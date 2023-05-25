@@ -1,7 +1,7 @@
 /**
 * @factory
 */
-function _SetValue(
+function _SetState(
     utils_reference
     , statenet_common_findStateful
     , is_array
@@ -15,7 +15,7 @@ function _SetValue(
     /**
     * @worker
     */
-    return function SetValue(rootElement, context, pathToUpdate, valueToSet) {
+    return function SetState(rootElement, context, pathToUpdate, valueToSet) {
         if (!context) {
             return;
         }
