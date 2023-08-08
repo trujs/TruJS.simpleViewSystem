@@ -49,34 +49,22 @@ function _SimpleMixin(
     * @function
     */
     function createWatchers(watchers, context) {
-        var watcherObjs = [];
+        var watcherObjs = []
+        ;
 
         watchers.forEach(function forEachWatcher(watcher) {
-            var ref = utils_reference(
-                watcher.path
-                , context
-            )
-            , guids
-            , handler = watcher.handler;
-
-            watcher = findStateful(ref.parent, ref.index);
-
-            if (!!watcher) {
-                watcherObjs.push({
-                    "key": ref.index
-                    , "parent": watcher
-                    , "guids": watcher[cnsts.watch](
-                        ref.index
-                        , function stateNetWrap(event, key) {
-                            handler(
-                                key
-                                , event.value
-                                , event
-                            );
-                        }
-                    )
-                });
-            }
+            watcherObjs = watcherObjs.concat(
+                context.$addListener(
+                    watcher.path
+                    , function stateNetWrap(event, key) {
+                        return watcher.handler(
+                            key
+                            , event.value
+                            , event
+                        );
+                    }
+                )
+            );
         });
 
         return watcherObjs;
@@ -94,7 +82,9 @@ function _SimpleMixin(
         }
 
         //get a key value store for the attributes
-        var attribs = getAttributes(element);
+        var attribs = getAttributes(element)
+        , watchers = []
+        ;
 
         //loop through the attributes looking for the mixins
         Object.keys(attribs).forEach(
