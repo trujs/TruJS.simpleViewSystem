@@ -24,6 +24,7 @@ function _SimpleTemplate(
     , statenet_common_isStateful
     , dom_createElement
     , dom_createTextNode
+    , dom_createComment
     , is_array
     , is_object
     , is_objectValue
@@ -45,6 +46,8 @@ function _SimpleTemplate(
     , INDXR_PATT = /\[\]/g
     , TEXT_PLACEHOLDER_PATT = /\<\#text\>/g
     , ESCAPED_TEXT_PLACEHOLDER_PATT = /\#\&lt\;\#text\&gt\;/g
+    , EMPTY_STYLE_PATT = /[ \n\t]*[A-z-]+[ \n\t]*[:][ \n\t]*[;]/g
+    , EMPTY_STYLE_BLOCK_PATT = /[ \n\t]*[A-z-_#.&0-9]+[ \n\t]*[{][ \n\t]*[}]/g
     , cnsts = {
         "value": "$value"
         , "destroy": "$destroy"
@@ -97,10 +100,12 @@ function _SimpleTemplate(
     function processSelfTag(viewNamespace, element, pathExprMap, context) {
         var self = element.children[0]
         , attrs = Array.from(self.attributes)
+        , elAttrs = Array.from(element.attributes)
         , children = Array.from(self.childNodes)
         , removeList = []
         , eventAttributes
         , path = "$.[0]self"
+        , selfExprMap = pathExprMap[path]
         ;
         //loop through the self tag attributes (non-expression attributes)
         //  and add/append them to the element
@@ -303,11 +308,7 @@ function _SimpleTemplate(
                         , pathExprMap[path]
                     );
                 }
-                //process any mixins
-                simpleMixin(
-                    element
-                    , context
-                );
+                
                 //process the element's children
                 processChildren(
                     namespace
@@ -330,6 +331,14 @@ function _SimpleTemplate(
             }
         }
 
+        //process any mixins last so child elements have already been processed
+        if (element.nodeType === 1) {
+            simpleMixin(
+                element
+                , context
+            );
+        }
+        
         //create the destroy method
         createDestroyMethod(namespace, element);
     }
@@ -376,11 +385,11 @@ function _SimpleTemplate(
                     : []
             }
         };
-        properties["$$"] = {
+        properties["$state"] = properties["$$"] = {
             "enumerable": true
             , "value": findStateful(data)
         };
-        properties["$"] = {
+        properties["$self"] = properties["$"] = {
             "enumerable": true
             , "value": data
         };
@@ -535,11 +544,17 @@ function _SimpleTemplate(
                 }
             }
         );
+        //remove new line and multi-spaces
+        attributeText = attributeText
+            .replace(TRIM_PATT, " ")
+        ;
         //remove the attribute if it had a null or undefined value only
         if (removeAttribute) {
-            element.removeAttribute(
-                attributeName
-            );
+            if (!element.hasAttribute(attributeName)) {
+                element.removeAttribute(
+                    attributeName
+                );
+            }
             return;
         }
         //if the attribute already has a value
@@ -603,33 +618,56 @@ function _SimpleTemplate(
     * @function
     */
     function processRepeatElement(parentNamespace, element, pathExprMap, context, path) {
-        var expr = element.getAttribute("expr")
-        , template = element.innerHTML
-        ;
-
-        if (!!expr) {
-            doRepeat(
-                parentNamespace
-                , element.parentNode.tagName
-                , element
-                , template
-                , expr
-                , pathExprMap
-                , context
-                , path
-            );
-        }
-        //remove the repeat
+        var template = element.innerHTML
+        , parentTagName = element.parentNode.tagName
+        , compiledExpr = getCompiledExpression(
+            element
+            , "expr"
+            , pathExprMap
+            , path
+        )
+        , placeholderNode = dom_createComment(
+            "repeat placeholder node"
+        )
+        , repeatToken = {
+            "parentNamespace": parentNamespace
+            , "parentTagName": parentTagName
+            , "placeholderNode": placeholderNode
+            , "compiledExpr": compiledExpr
+            , "template": template
+            , "pathExprMap": pathExprMap
+            , "context": context
+            , "path": path
+        };
+        //add the placeholder node
+        element.parentElement.insertBefore(
+            placeholderNode
+            , element
+        );
+        //remove the repeat element from the flow
         element.parentNode.removeChild(element);
+        //execute the repeat
+        doRepeat(
+            repeatToken
+        );
+        //watch any state variables
+        watchCompiledExpression(
+            placeholderNode
+            , context
+            , pathExprMap[path].attributes["expr"]
+            , doRepeat.bind(
+                null
+                , repeatToken
+            )
+        );
     }
     /**
     * Processes an element with a repeat attribute
     * @function
     */
     function processRepeatAttrib(parentNamespace, element, pathExprMap, context, path) {
-        var parentTag = element.parentNode.tagName
-        , template
-        , expr = element.getAttribute("repeat")
+        var template
+        , parentTagName = element.parentNode.tagName
         , parentPath = path.substring(
             0
             , path.lastIndexOf(".")
@@ -646,12 +684,34 @@ function _SimpleTemplate(
         )
         , newPath = `${parentPath}.${elIndex}repeat`
         , newExprPath = `${newPath}.[0]${elName}`
-        ;
+        , compiledExpr = getCompiledExpression(
+            element
+            , "repeat"
+            , pathExprMap
+            , path
+        )
+        , placeholderNode = dom_createComment(
+            "repeat placeholder node"
+        )
+        , repeatToken = {
+            "parentNamespace": parentNamespace
+            , "parentTagName": parentTagName
+            , "placeholderNode": placeholderNode
+            , "compiledExpr": compiledExpr
+            , "template": null
+            , "pathExprMap": pathExprMap
+            , "context": context
+            , "path": newPath
+        };
         //remove the repeat attribute
         element.removeAttribute("repeat");
         //use the outerHTML as the template
-        template = element.outerHTML;
-
+        repeatToken.template = element.outerHTML;
+        //add the placeholder node
+        element.parentElement.insertBefore(
+            placeholderNode
+            , element
+        );
         //update the path expression map to use repeat
         Object.keys(pathExprMap)
         .forEach(
@@ -668,36 +728,67 @@ function _SimpleTemplate(
                 }
             }
         );
-
         //execute the repeat
         doRepeat(
-            parentNamespace
-            , parentTag
-            , element //insert before element
-            , template
-            , expr
-            , pathExprMap
-            , context
-            , newPath
+            repeatToken
         );
-        //destroy the template element
+        //remove the template element from the flow
         element.parentNode.removeChild(element);
+        //watch any state variables
+        watchCompiledExpression(
+            placeholderNode
+            , context
+            , pathExprMap[newExprPath].attributes["repeat"]
+            , doRepeat.bind(
+                null
+                , repeatToken
+            )
+        );
     }
     /**
     * Performs the repeat operation
     * @function
     */
-    function doRepeat(parentNamespace, parentTag, beforeEl, template, expr, pathExprMap, context, path) {
+    function doRepeat(repeatToken) {
+        var [
+            parentNamespace
+            , parentTag
+            , beforeEl
+            , compiledExpr
+            , template
+            , pathExprMap
+            , context
+            , path
+        ] = Object.values(repeatToken)
+        , repeatContext
+        , mockParentElement = createElement(
+            parentTag
+        )
         //evaluate the expression and get an iterator
-        var repeatContext
-        , mockParentElement = createElement(parentTag)
-        , iter = simpleExpression(expr.replace(TAG_PATT, "$1"), context).iterator
+        , iter = compiledExpr.execute(
+            context
+            , {"quiet":true}
+        )
         , nodes
         , repeatGroups = []
+        , repeatElements = repeatToken.repeatElements
         ;
         //if this didn't evaluate to an iterator then skip
-        if (!iter.next) {
+        if (!iter || !iter.next) {
             return;
+        }
+        //if there are repeat elements then remove ethose
+        if (!is_empty(repeatElements)) {
+            for (let i = 0, len = repeatElements.length; i < len; i++) {
+                repeatElements[i].$destroy();
+                repeatElements[i]?.parentElement?.removeChild(
+                    repeatElements[i]
+                );
+            }
+            iter.reset();
+        }
+        else if (!repeatToken.repeatElements) {
+            repeatToken.repeatElements = [];
         }
         //iterate through the repeat expression
         while(!is_nill(repeatContext = iter.next())) {
@@ -705,6 +796,12 @@ function _SimpleTemplate(
             mockParentElement.innerHTML = template;
             //move the child nodes to the real parent
             nodes = Array.from(mockParentElement.childNodes);
+            //add the nodes to the list
+            repeatToken.repeatElements =
+                repeatToken.repeatElements.concat(
+                    nodes
+                )
+            ;
             insertNodes(
                 beforeEl
                 , mockParentElement.childNodes
@@ -915,6 +1012,34 @@ function _SimpleTemplate(
         ;
     }
     /**
+    * Uses a compiled expression to get a list of variables and adds watchers
+    * for any that are stateful
+    * @function
+    */
+    function watchCompiledExpression(element, context, compiledExpr, handlerFn) {
+        //get the list of variables
+        var variables =
+            Object.values(compiledExpr.expressions)
+            .map(
+                function mapExpressionVariables(expression) {
+                    return expression.variables
+                }
+            )
+            .flat()
+        ;
+        //add the watchers
+        if (variables.length > 0) {
+            watchKeys(
+                element
+                , context
+                , variables
+                , handlerFn
+            );
+            return true;
+        }
+        return false;
+    }
+    /**
     * Processes a text node
     * @function
     */
@@ -954,20 +1079,18 @@ function _SimpleTemplate(
             , expressionMap
             , textElement
         );
-        //add the watchers
-        if (variables.length > 0) {
-            watchKeys(
-                textElement
+        //watch any state variables
+        watchCompiledExpression(
+            textElement
+            , context
+            , expressionMap
+            , setText.bind(
+                null
                 , context
-                , variables
-                , setText.bind(
-                    null
-                    , context
-                    , expressionMap
-                    , textElement
-                )
-            );
-        }
+                , expressionMap
+                , textElement
+            )
+        );
     }
     /**
     * @function
@@ -1090,10 +1213,27 @@ function _SimpleTemplate(
     * @function
     */
     function setStyleText(styleNode, expressionMap, context) {
-        styleNode.innerHTML = getExpressionText(
+        var cssMarkup = getExpressionText(
             context
             , expressionMap
         );
+        //remove empty styles
+        cssMarkup = cssMarkup
+            .replace(
+                EMPTY_STYLE_PATT
+                , ""
+            )
+            .replace(
+                SPC_PATT
+                , ""
+            )
+            .replace(
+                EMPTY_STYLE_BLOCK_PATT
+                , ""
+            )
+        ;
+
+        styleNode.innerHTML = cssMarkup;
     }
     /**
     * @function
@@ -1188,42 +1328,22 @@ function _SimpleTemplate(
     function watchKeys(element, context, keys, handler) {
         var watchers = [];
 
-        keys.forEach(function forEachKey(key) {
-            var watcherKey;
-            if (INDXR_PATT.test(key)) {
-                //set the watcher key
-                watcherKey = key.replace(INDXR_PATT,"$every");
-                //change the key to before the first indexer
-                key = key.substring(0, key.indexOf("[]") - 1);
-            }
-            var ref = utils_reference(
-                key
-                , context
-            )
-            , watcher = ref.found
-                && findStateful(ref.parent, ref.index)
-            ;
-
-            if (!watcherKey) {
-                watcherKey = ref.index;
-            }
-
-            if (!!watcher) {
-                watchers.push({
-                    "key": watcherKey
-                    , "parent": watcher
-                    , "guids": watcher[cnsts.watch](
-                        watcherKey
-                        , function stateNetWrap(event, key) {
-                            handler(
-                                key
-                                , event.value
-                                , event
-                            );
-                        }
-                    )
-                });
-            }
+        keys.forEach(function forEachKey(key) {         
+            watchers.push({
+                "key": key
+                , "parent": context.$state
+                , "guids": context.$state[cnsts.watch](
+                    key
+                    , function stateNetWrap(event, key) {
+                        handler(
+                            key
+                            , event.value
+                            , event
+                        );
+                    }
+                )
+            });
+            
         });
         element.watchers = element.watchers || [];
         element.watchers = element.watchers.concat(watchers);
@@ -1305,7 +1425,8 @@ function _SimpleTemplate(
                 if (child.hasOwnProperty(cnsts.destroy)) {
                     child[cnsts.destroy]();
                 }
-                else {
+                //if the child is an element it can have children
+                if (child.nodeType === 1){
                     destroyChildren(child);
                 }
             });
@@ -1371,6 +1492,12 @@ function _SimpleTemplate(
             , pathExpressionMap
             , data
             , "$"
+        );
+
+        //process any mixins last so child elements have already been processed
+        simpleMixin(
+            element
+            , context
         );
 
         //ensure the element passed as tag has a destroy function
