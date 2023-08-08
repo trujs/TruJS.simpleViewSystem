@@ -48,6 +48,7 @@ function _SimpleView(
             , "controller": "view-controller"
             , "stateId": "view-state-id"
             , "name": "view-name"
+            , "processed": "view-processed"
         }
     }
     /**
@@ -104,51 +105,45 @@ function _SimpleView(
     /**
     * @function
     */
-    function renderView(view, renderedCb, template, context) {
-        //create the state context and view template (HTML/CSS)
-        return setupView(
-            view
-            , template
-            , context
-        )
-        //then process any child elements
-        .then(
-            function thenProcessChildElements() {
-                if (!is_empty(view.children)) {
-                    return processChildElements(
-                        view.namespace
-                        , view.children
-                        , view.state
-                    );
-                }
-                return promise.resolve([]);
+    async function renderView(view, renderedCb, template, context) {
+        view.processing = true;
+        try {
+            var childViews;
+            //create the state context and view template (HTML/CSS)
+            await setupView(
+                view
+                , template
+                , context
+            );
+            //if there are child nodes then process those and return any sub-views
+            if (!is_empty(view.children)) {
+                childViews = await processChildElements(
+                    view.namespace
+                    , view.children
+                    , view.state
+                );
+                appendElements(
+                    view
+                );
+                view.views = childViews;
             }
-        )
-        //then append child elements and handle child views
-        .then(
-            function thenHandleChildren(childViews) {
-                //append the child elements and add views to list
-                if (!is_empty(view.children)) {
-                    appendElements(
-                        view
-                    );
-                    view.views = childViews;
-                }
-                //inform the view it's done rendering
-                renderedCb();
-                //resolve the view for the render caller
-                return promise.resolve(view);
-            }
-        )
-        //catch errors
-        .catch(
-            function catchRenderError(err) {
-                //inform the view it failed
-                renderedCb(err);
-                //return the error for the caller
-                return promise.reject(err);
-            }
-        );
+            //inform the view it's done rendering
+            renderedCb();
+            //add the mutation observer for the view
+            observeViewChildren(
+                view
+            );
+            return view;
+        }
+        catch(ex) {
+            //inform the view it failed
+            renderedCb(ex);
+            //return the error for the caller
+            return ex;
+        }
+        finally {
+            view.processing = false;
+        }
     }
     /**
     * @function
@@ -167,6 +162,11 @@ function _SimpleView(
             );
             //clear the element contents
             view.element.innerHTML = "";
+            //start listening for attribute updates on the view so we can sync the view
+            // attributes object
+            observeViewAttributes(
+                view
+            );
             //process the html and css templates
             processTemplates(
                 view
@@ -231,6 +231,10 @@ function _SimpleView(
             view.context = {};
         }
 
+        //stop observing the mutations
+        disconnectViewChildObserver(view);
+        disconnectViewAttributeObserver(view);
+
         //destroy the current children
         destroyChildren(view);
 
@@ -266,7 +270,7 @@ function _SimpleView(
         ///TODO: get the child view state ids, so we can pre load the child
         ///      states in case the view needs to add listeners to child state
         ///      IDs
-        
+
     }
     /**
     * @function
@@ -363,7 +367,7 @@ function _SimpleView(
     async function processChildElement(parentNamespace, parentState, childEl) {
         //if this is a text node, skip all of this
         if (childEl.nodeType !== 1) {
-            return ;
+            return [];
         }
         var tagName = getElementName(childEl)
         , ctrlName = childEl.hasAttribute(cnsts.viewAttributeNames.controller)
@@ -394,7 +398,7 @@ function _SimpleView(
         ;
         //if a view was generated, return that
         if (!!childView) {
-            return childView;
+            return [childView];
         }
         //set the view-ns attribute if there is a view-name
         viewName = childEl.getAttribute(cnsts.viewAttributeNames.name);
@@ -697,6 +701,7 @@ function _SimpleView(
             return promise.reject(ex);
         }
     }
+
     /**
     * Destroys the view's child elements
     * @function
@@ -750,6 +755,10 @@ function _SimpleView(
     * @function
     */
     function destroyView(view) {
+        view.processing === true;
+        //remove the mutation observer
+        disconnectViewChildObserver(view);
+        disconnectViewAttributeObserver(view);
         //destroy any watchers now so nothing is fired during destroying
         destroyWatchers(view);
         //remove the element from the parent now to stop any rendering
@@ -768,7 +777,9 @@ function _SimpleView(
         destroyContext(view);
         //remove the element
         view.element.$destroy();
+        view.processing === false;
     }
+
     /**
     * Creates watchers based on the return from the controller
     * @function
@@ -800,18 +811,13 @@ function _SimpleView(
 
         for (var i = 0, l = element.attributes.length; i < l; i++) {
             var attr = element.attributes[i]
-            , name = attr.name;
+            , name = attr.name
             //convert the name
-            if (name.indexOf("-") !== -1) {
-                name = name.split("-");
-                name = name.map(function (val, indx) {
-                    if (!!indx) {
-                        val = val.substring(0,1).toUpperCase() + val.substring(1);
-                    }
-                    return val;
-                }).join("");
-            }
-            attributes[name] = attr[cnsts.value] || attr.value;
+            , jsSafeName = convertAttributeName(
+                name
+                )
+            ;
+            attributes[jsSafeName] = attr[cnsts.value] || attr.value;
         }
 
         //if there is innerHTML then let's scrape that out and add an attrib
@@ -820,6 +826,24 @@ function _SimpleView(
         }
 
         return attributes;
+    }
+    /**
+     * Converts a DOM attribute name to a JS safe name
+     * @function
+     */
+    function convertAttributeName(name) {
+        //convert the name
+        if (name.indexOf("-") !== -1) {
+            name = name.split("-");
+            name = name.map(function (val, indx) {
+                if (!!indx) {
+                    val = val.substring(0,1).toUpperCase() + val.substring(1);
+                }
+                return val;
+            }).join("");
+        }
+
+        return name;
     }
     /**
     * Creates the addChildView closure, which when called, adds a child view to
@@ -841,6 +865,9 @@ function _SimpleView(
         , position
         , newState
     ) {
+        //pause mutation handling
+        parentView.processing = true;
+
         var childPath, ref, parentState, views
         , parent = parentView.element
         , tempEl, element, view
@@ -879,11 +906,12 @@ function _SimpleView(
             , parentView.context
         ).children[0];
         //create the view the same way it would be created
-        childView = await processChildElement(
+        childView = (await processChildElement(
             parentView.namespace
             , parentView.state
             , element
-        );
+        ))[0];
+
         //add the element to the parent
         if (is_nill(position)) {
             parent.appendChild(element);
@@ -897,6 +925,8 @@ function _SimpleView(
             parentView.views.splice(position, 0, childView);
         }
         parentView.children.push(element);
+        //unpause mutation handling
+        parentView.processing = false;
 
         return childView;
     }
@@ -989,6 +1019,11 @@ function _SimpleView(
                 null
                 , view
             );
+            view.processChildElement = processChildElement.bind(
+                null
+                , view.namespace
+                , state
+            );
             //create the destroy closure
             view[cnsts.destroy] = destroyView.bind(
                 null
@@ -1077,6 +1112,277 @@ function _SimpleView(
 
         }
     }
+
+    /**
+    * @function
+    */
+    function observeViewChildren(view) {
+        //create a new mutation observer if one doesn't exist
+        view.childMutationObserver = new MutationObserver(
+            viewChildMutationHandler.bind(
+                null
+                , view
+            )
+        );
+        //start observing
+        view.childMutationObserver.observe(
+            view.element
+            , {
+                "childList": true
+                , "subtree": true
+            }
+        );
+    }
+    /**
+    * @function
+    */
+    function disconnectViewChildObserver(view) {
+        if (!view.childMutationObserver) {
+            return;
+        }
+        let mutationObserver = view.childMutationObserver
+        //get any additional mutations from the buffer
+        , mutationList = mutationObserver.takeRecords()
+        ;
+        //disconnect the observer
+        mutationObserver.disconnect();
+        //process any mutations that were on the buffer
+        if (!is_empty(mutationList)) {
+            viewChildMutationHandler(
+                view
+                , mutationList
+            );
+        }
+        delete view.childMutationObserver;
+    }
+    /**
+    * @function
+    */
+    async function viewChildMutationHandler(view, mutationList) {
+         //if the view is processing skip any node mutations
+        if (view.processing === true) {
+            return;
+        }
+        var mutations = [
+            ...mutationList
+        ];
+        //loop through the mutation list
+        for (let i = 0, len = mutations.length, mutationRecord; i < len; i++) {
+            mutationRecord = mutations[i];
+            //if there are removed nodes, see if we are removing a child view
+            if (!is_empty([...mutationRecord.removedNodes])) {
+                processRemovedNodes(
+                    view
+                    , mutationRecord.removedNodes
+                );
+            }
+            //if there are add nodes, process them and find any child views
+            if (!is_empty([...mutationRecord.addedNodes])) {
+                await processAddedNodes(
+                    view
+                    , mutationRecord.addedNodes
+                );
+            }
+        }
+    }
+    /**
+    * @function
+    */
+    function processRemovedNodes(view, removedNodes) {
+        for (
+            let i = 0, len = removedNodes.length, removedNode, childViewIndex
+            ; i < len
+            ; i++
+        ) {
+            removedNode = removedNodes[i];
+            //determine if this view is the parent view or further up-stream
+            if (!isParentView(view, removedNode)) {
+                return;
+            }
+            //ignore text and comment node updates
+            if (removedNode.nodeType !== 1) {
+                continue;
+            }
+            //see if the element is a child view
+            childViewIndex = getElementChildViewIndex(
+                view
+                , removedNode
+            );
+            //remove the child from the list
+            if (childViewIndex > -1) {
+                destroyView(
+                    view.views[childViewIndex]
+                );
+                view.views.splice(childViewIndex, 1);
+            }
+        }
+    }
+    /**
+    * @function
+    */
+    async function processAddedNodes(view, addedNodes) {
+        for (
+            let i = 0, len = addedNodes.length, addedNode, childViews
+            ; i < len
+            ; i++
+        ) {
+            addedNode = addedNodes[i];
+            //determine if this view is the parent view or further up-stream
+            if (!isParentView(view, addedNode)) {
+                return;
+            }
+            //ignore text and comment node updates
+            if (addedNode.nodeType !== 1) {
+                continue;
+            }
+            //if there is a view-ns it's already been processed
+            if (
+                addedNode.hasAttribute(cnsts.viewAttributeNames.namespace)
+                || addedNode.hasAttribute(cnsts.viewAttributeNames.processed)
+            ) {
+                continue;
+            }
+            //pause mutation processing
+            view.processing = true;
+            //process the new element
+            childViews = await view.processChildElement(
+                addedNode
+            );
+            if  (!!childViews) {
+                view.views = view.views.concat(
+                    childViews.flat()
+                );
+            }
+            addedNode.setAttribute(
+                cnsts.viewAttributeNames.processed
+                , true
+            );
+            //un-pause mutation processing
+            view.processing = false;
+        }
+    }
+    /**
+    * @function
+    */
+    function getElementChildViewIndex(view, element) {
+        for (let i = 0, len = view.views.length, childView; i < len; i++) {
+            childView = view.views[i];
+            if (childView.element === element) {
+                return i;
+            }
+        }
+    }
+    /**
+    * Checks to see if the view is the direct parent of the element
+    * @function
+    */
+    function isParentView(view, element) {
+        //find the element with a view-ns and no view-name
+        var viewNode = element;
+        while ((viewNode = viewNode.parentNode)) {
+            //a view-ns and no view-name means view element, if not the view's
+            // element then no need to look further return false, otherwise
+            // it's the element's parent view, return true
+            if (
+                viewNode.hasAttribute(cnsts.viewAttributeNames.namespace)
+                && !viewNode.hasAttribute(cnsts.viewAttributeNames.name)
+            ) {
+                if (view.element === viewNode) {
+                    return true;
+                }
+                break;
+            }
+        }
+        return false;
+    }
+    
+    /**
+    * @function
+    */
+    function observeViewAttributes(view) {
+        //create a new mutation observer if one doesn't exist
+        view.attributeMutationObserver = new MutationObserver(
+            viewAttributeMutationHandler.bind(
+                null
+                , view
+            )
+        );
+        //start observing
+        view.attributeMutationObserver.observe(
+            view.element
+            , {
+                "attributes": true
+            }
+        );
+    }
+    /**
+     * @function
+     */
+    function disconnectViewAttributeObserver(view) {
+        if (!view.attributeMutationObserver) {
+            return;
+        }
+        let mutationObserver = view.attributeMutationObserver
+        //get any additional mutations from the buffer
+        , mutationList = mutationObserver.takeRecords()
+        ;
+        //disconnect the observer
+        mutationObserver.disconnect();
+        //process any mutations that were on the buffer
+        if (!is_empty(mutationList)) {
+            viewChildMutationHandler(
+                view
+                , mutationList
+            );
+        }
+        delete view.attributeMutationObserver;
+    }
+    /**
+    * @function
+    */
+    function viewAttributeMutationHandler(view, mutationList) {
+        var mutations = [
+            ...mutationList
+        ];
+        //loop through the mutation list
+        for (let i = 0, len = mutations.length, mutationRecord; i < len; i++) {
+            mutationRecord = mutations[i];
+            //if this is an attribute update for the view element, update the 
+            // view attributes
+            if (mutationRecord.type === "attributes") {
+                for (let i = 0, len = mutations.length, mutationRecord; i < len; i++) {
+                    mutationRecord = mutations[i];
+                    if (view.element === mutationRecord.target) {
+                        updateViewAttributes(
+                            view
+                            , mutationRecord
+                        );
+                    }
+                }
+            }
+        }
+       
+    }
+    /**
+    * Function
+    */
+    function updateViewAttributes(view, mutationRecord) {
+        var jsSafeName = convertAttributeName(
+            mutationRecord.attributeName
+        )
+        , attributeNode = view.element.getAttributeNode(
+            mutationRecord.attributeName
+        )
+        , attributeValue = !!attributeNode
+            ? attributeNode[cnsts.value]
+                || attributeNode.value
+            : undefined
+
+        ;
+        if (!!attributeNode) {
+            view.attributes[jsSafeName] = attributeValue;
+        }
+   }
 
     /**
     * @worker
