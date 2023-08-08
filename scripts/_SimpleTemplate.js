@@ -102,7 +102,6 @@ function _SimpleTemplate(
         , attrs = Array.from(self.attributes)
         , elAttrs = Array.from(element.attributes)
         , children = Array.from(self.childNodes)
-        , removeList = []
         , eventAttributes
         , path = "$.[0]self"
         , selfExprMap = pathExprMap[path]
@@ -504,6 +503,7 @@ function _SimpleTemplate(
         )
         , removeAttribute = false
         , attributeText = expressionMap.cleanText
+        , isSelfTag = path.indexOf("self") !== -1
         ;
         //loop through the expression results and append to the attribute text
         Object.keys(expressionResults)
@@ -550,17 +550,27 @@ function _SimpleTemplate(
         ;
         //remove the attribute if it had a null or undefined value only
         if (removeAttribute) {
-            if (!element.hasAttribute(attributeName)) {
+            //if there is text from the cleanText we'll want to use that
+            if (!!attributeText.trim()) {
+                attributeText = attributeText
+                    .trim()
+                ;
+            }
+            //if the path is self and the attribute exists already
+            else if (isSelfTag && element.hasAttribute(attributeName)) {
+                return;
+            }
+            else {
                 element.removeAttribute(
                     attributeName
                 );
+                return;
             }
-            return;
         }
         //if the attribute already has a value
         if (element.hasAttribute(attributeName)) {
             //if this is a self tag then append
-            if (path.indexOf("self") !== -1) {
+            if (isSelfTag) {
                 attributeText =
                     `${element.getAttribute(attributeName).trim()} ${attributeText}`
                 ;
