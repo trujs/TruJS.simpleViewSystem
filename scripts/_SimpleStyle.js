@@ -17,7 +17,7 @@ function _SimpleStyle(
     , xmlBindVariableParser
     , styleCompiler
 ) {
-    var EMPTY_STYLE_PATT = /(?:^|\n\r?)[ \t]*[a-zA-z0-9-_]+[:][ ]?(?:undefined|null)?;/g
+    var EMPTY_STYLE_PATT = /(?:^|\n\r?)[ \t]*[a-zA-z0-9-_]+[:][ \n\r\t]*(?:undefined|null)?[ \n\r\t]*;/g
     , STRING_PERC_PATT = /(?:'|")([0-9]{1,3}[%])(?:'|")/g
     , cnsts = {
         "destroy": "$destroy"
