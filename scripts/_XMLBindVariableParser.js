@@ -463,6 +463,12 @@ function _XMLBindVariableParser(
             }
         }
 
+        if (!!curText) {
+            tokens.push(
+                `(${line},${xmlMarkup.length - curText.length})TEXT:${curText}`
+            );
+        }
+
         return tokens;
     }
     /**
