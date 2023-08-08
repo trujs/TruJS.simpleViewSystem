@@ -18,7 +18,47 @@
         , "apply": [":PunyJS.core.object.Apply"]
         , "regExp": [":PunyJS.core.regexp._RegExp",[]]
     }]
-
+    , "dom": [{
+        "window": ["+window"]
+        , "document": ["+document"]
+        , "body": ["+document.body"]
+        , "head": ["+document.getElementsByTagName('head')[0]"]
+        , "formData": ["+FormData"]
+        , "getElementById": [
+            ".dom.document"
+            , ".getElementById"
+            , { "bind": { "scope": ["+document"] } }
+        ]
+        , "createElement": [
+            ".dom.document"
+            , ".createElement"
+            , { "bind": { "scope": ["+document"] } }
+        ]
+        , "createComment": [
+            ".dom.document"
+            , ".createComment"
+            , { "bind": { "scope": ["+document"] } }
+        ]
+        , "createElementNs": [
+            ".dom.document"
+            , ".createElementNS"
+            , { "bind": { "scope": ["+document"] } }
+        ]
+        , "createTextNode": [
+            ".dom.document"
+            , ".createTextNode"
+            , { "bind": { "scope": ["+document"] } }
+        ]
+        , "getComputedStyle": [
+            ".dom.window"
+            , ".getComputedStyle"
+            , { "bind": { "scope": ["+window"] } }
+        ]
+        , "cookie": [
+            ":PunyJS.core.dom._Cookie"
+            , []
+        ]
+    }]
     , "classHelper": [":PunyJS.core.dom._ClassHelper", []]
     , "styleHelper": [":PunyJS.core.dom._StyleHelper", []]
     , "elementHelper": [":PunyJS.core.dom._ElementHelper", []]
@@ -36,6 +76,7 @@
     , "simpleMethods": [{
         "$update": [":TruJS.simpleViewSystem.scripts.simpleMethods._UpdateAttribute", []]
         , "$delete": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteAttribute", []]
+        , "$get": [":TruJS.simpleViewSystem.scripts.simpleMethods._GetAttribute", []]
         , "$addClass": [":TruJS.simpleViewSystem.scripts.simpleMethods._AddClass", []]
         , "$delClass": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteClass", []]
         , "$toggleClass": [":TruJS.simpleViewSystem.scripts.simpleMethods._ToggleClass", []]
@@ -43,7 +84,7 @@
         , "$delStyle": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteStyle", []]
         , "$setState": [":TruJS.simpleViewSystem.scripts.simpleMethods._SetState", []]
         , "$toggleState": [":TruJS.simpleViewSystem.scripts.simpleMethods._ToggleState", []]
-        , "$setValue": [":TruJS.simpleViewSystem.scripts.simpleMethods._SetValue", []]
         , "$setProperty": [":TruJS.simpleViewSystem.scripts.simpleMethods._SetProperty", []]
+        , "$chooseOne": [":TruJS.simpleViewSystem.scripts.simpleMethods._ChooseOne", []]
     }]
 }
