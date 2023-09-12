@@ -9,6 +9,8 @@ function _StyleCompiler(
     var WSP_PATT = /^(?:[\r\n \t]*)((?:(?:.)|[\r\n \t])*?)(?:[\r\n \t]*)$/
     , LINE_PATT = /(\r?\n)/g
     , MEDIA_SELECTOR_PATT = /[ ]?@[A-z]+[ ][(]([^)]+)[)]/g
+    , MULTI_SPACE_PATT = /[ ]{2,}/g
+    , COMBINATOR_PATT = /[+~,]/
     ;
 
     return StyleCompiler;
@@ -123,15 +125,28 @@ function _StyleCompiler(
         //loop through the selectors and combine them into a single selector
         block.selectors.forEach(function forEachSel(sel) {
             if (!!selector) {
-                selector =
-                sel.split(",")
-                .map(function mapParts(part) {
-                    if (part.indexOf("&") === 0) {
-                        return selector + part.substring(1);
-                    }
-                    return selector + " " + part;
-                })
-                .join(",");
+                var combinator = sel.match(COMBINATOR_PATT);
+                combinator = !!combinator && combinator[0];
+                //check for combinators
+                if (!!combinator) {
+                    sel = sel.split(combinator)
+                    .map(function mapParts(part) {
+                        if (part.indexOf("&") === 0) {
+                            return selector + part.substring(1).trim();
+                        }
+                        return selector + " " + part.trim();
+                    })
+                    .join(` ${combinator} `)
+                    ;
+                }
+                else if (sel.indexOf("&") === 0) {
+                    sel = selector + sel.substring(1).trim();
+                }
+                else {
+                    sel = selector + " " + sel.trim();
+                }
+
+                selector = sel.replace(MULTI_SPACE_PATT, " ");
             }
             else {
                 selector = sel;
