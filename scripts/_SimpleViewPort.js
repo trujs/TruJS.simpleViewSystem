@@ -49,10 +49,13 @@ function _SimpleViewPort(
             }
 
             //apply main's state to the application's state
-            utils_apply(
-                views_main_state
-                , state
-            );
+            if (views_main_state !== state) {
+                utils_apply(
+                    views_main_state
+                    , state
+                );
+            }
+            
 
             if (!context) {
                 context = {};
