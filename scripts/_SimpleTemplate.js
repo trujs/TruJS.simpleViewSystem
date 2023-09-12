@@ -660,16 +660,6 @@ function _SimpleTemplate(
         doRepeat(
             repeatToken
         );
-        //watch any state variables
-        watchCompiledExpression(
-            placeholderNode
-            , context
-            , pathExprMap[path].attributes["expr"]
-            , doRepeat.bind(
-                null
-                , repeatToken
-            )
-        );
     }
     /**
     * Processes an element with a repeat attribute
@@ -744,16 +734,6 @@ function _SimpleTemplate(
         );
         //remove the template element from the flow
         element.parentNode.removeChild(element);
-        //watch any state variables
-        watchCompiledExpression(
-            placeholderNode
-            , context
-            , pathExprMap[newExprPath].attributes["repeat"]
-            , doRepeat.bind(
-                null
-                , repeatToken
-            )
-        );
     }
     /**
     * Performs the repeat operation
@@ -781,24 +761,10 @@ function _SimpleTemplate(
         )
         , nodes
         , repeatGroups = []
-        , repeatElements = repeatToken.repeatElements
         ;
         //if this didn't evaluate to an iterator then skip
         if (!iter || !iter.next) {
             return;
-        }
-        //if there are repeat elements then remove ethose
-        if (!is_empty(repeatElements)) {
-            for (let i = 0, len = repeatElements.length; i < len; i++) {
-                repeatElements[i].$destroy();
-                repeatElements[i]?.parentElement?.removeChild(
-                    repeatElements[i]
-                );
-            }
-            iter.reset();
-        }
-        else if (!repeatToken.repeatElements) {
-            repeatToken.repeatElements = [];
         }
         //iterate through the repeat expression
         while(!is_nill(repeatContext = iter.next())) {
@@ -806,15 +772,10 @@ function _SimpleTemplate(
             mockParentElement.innerHTML = template;
             //move the child nodes to the real parent
             nodes = Array.from(mockParentElement.childNodes);
-            //add the nodes to the list
-            repeatToken.repeatElements =
-                repeatToken.repeatElements.concat(
-                    nodes
-                )
-            ;
+            //
             insertNodes(
                 beforeEl
-                , mockParentElement.childNodes
+                , nodes
             );
             //record the resulting nodes and their context
             repeatGroups.push(
