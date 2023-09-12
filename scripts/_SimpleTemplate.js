@@ -1338,22 +1338,47 @@ function _SimpleTemplate(
     function watchKeys(element, context, keys, handler) {
         var watchers = [];
 
-        keys.forEach(function forEachKey(key) {         
-            watchers.push({
-                "key": key
-                , "parent": context.$state
-                , "guids": context.$state[cnsts.watch](
-                    key
-                    , function stateNetWrap(event, key) {
-                        handler(
-                            key
-                            , event.value
-                            , event
-                        );
-                    }
-                )
-            });
-            
+        keys.forEach(function forEachKey(key) {
+            var watcherKey;
+            if (INDXR_PATT.test(key)) {
+                //set the watcher key
+                watcherKey = key.replace(INDXR_PATT,"$every");
+                //change the key to before the first indexer
+                key = key.substring(0, key.indexOf("[]") - 1);
+            }
+            var ref = utils_reference(
+                key
+                , context
+            )
+            , watcher = ref.found
+                && findStateful(ref.parent, ref.index)
+            ;
+
+            if (!watcherKey && !!watcher) {
+                watcherKey = ref.index;
+            }
+            //in case the path doesn't exist default to state
+            if (!watcher) {
+                watcher = context.$state;
+                watcherKey = key;
+            }
+
+            if (!!watcher) {
+                watchers.push({
+                    "key": watcherKey
+                    , "parent": watcher
+                    , "guids": watcher[cnsts.watch](
+                        watcherKey
+                        , function stateNetWrap(event, key) {
+                            handler(
+                                key
+                                , event.value
+                                , event
+                            );
+                        }
+                    )
+                });
+            }
         });
         element.watchers = element.watchers || [];
         element.watchers = element.watchers.concat(watchers);
