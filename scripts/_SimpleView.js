@@ -890,14 +890,18 @@ function _SimpleView(
         //add the element to the parent
         if (is_nill(position)) {
             parent.appendChild(element);
-            parentView.views.push(childView);
+            if (!!childView) {
+                parentView.views.push(childView);
+            }
         }
         else {
             parent.insertBefore(
                 element
                 , parent.childNodes[position]
             );
-            parentView.views.splice(position, 0, childView);
+            if (!!childView) {
+                parentView.views.splice(position, 0, childView);
+            }
         }
         parentView.children.push(element);
 
