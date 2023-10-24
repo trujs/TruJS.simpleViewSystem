@@ -297,6 +297,7 @@ function _SimpleTemplate(
                     parentNamespace
                     , element
                 );
+                element.namespace = namespace;
                 //process any event attributes
                 if (!is_empty(eventAttributes)) {
                     processEventAttributes(
