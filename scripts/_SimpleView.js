@@ -105,37 +105,27 @@ function _SimpleView(
     /**
     * @function
     */
-    async function renderView(view, renderedCb, template, context) {
-        try {
-            var childViews;
-            //create the state context and view template (HTML/CSS)
-            await setupView(
-                view
-                , template
-                , context
+    async function renderView(view, template, context) {
+        var childViews;
+        //create the state context and view template (HTML/CSS)
+        await setupView(
+            view
+            , template
+            , context
+        );
+        //if there are child nodes then process those and return any sub-views
+        if (!is_empty(view.children)) {
+            childViews = await processChildElements(
+                view.namespace
+                , view.children
+                , view.state
             );
-            //if there are child nodes then process those and return any sub-views
-            if (!is_empty(view.children)) {
-                childViews = await processChildElements(
-                    view.namespace
-                    , view.children
-                    , view.state
-                );
-                appendElements(
-                    view
-                );
-                view.views = childViews;
-            }
-            //inform the view it's done rendering
-            renderedCb();
-            return view;
+            appendElements(
+                view
+            );
+            view.views = childViews;
         }
-        catch(ex) {
-            //inform the view it failed
-            renderedCb(ex);
-            //return the error for the caller
-            return ex;
-        }
+        return view;
     }
     /**
     * @function
@@ -336,10 +326,8 @@ function _SimpleView(
         //then extract the views from the results
         .then(
             function thenProcessResults(results) {
-                return promise.resolve(
-                    processChildResults(
-                        results
-                    )
+                return processChildResults(
+                    results
                 );
             }
         );
@@ -945,93 +933,54 @@ function _SimpleView(
     /**
     * @function
     */
-    function createView(parentNamespace, element, controller, state, resolve, reject) {
-        try {
-            //create the view token
-            var view = {
-                "element": element
-                , "name": getElementName(element)
-                , "namespace": getViewNamespace(
-                    element
-                    , parentNamespace
-                )
-                , "state": state
-                , "controller": controller
-                , "attributes": getAttributes(element)
-                , "originalContents": element.children.length > 0
-                    ? [...element.children]
-                    : null
-                , "children": []
-                , "views": []
-                , "watchers": []
-            }
-            , resolved = false
-            , watchers;
-            //add the view namespace attribute
-            element.setAttribute(
-                cnsts.viewAttributeNames.namespace
-                , view.namespace
-            );
-            view.attributes.viewNs = view.namespace;
-            //create the render function with the view token
-            view.render = renderView.bind(
-                null
-                , view
-                , function renderedCb(err) {
-                    if (resolved) {
-                        return;
-                    }
-                    resolved = true;
-                    if (!err) {
-                        resolve(view);
-                    }
-                    else {
-                        reject(err);
-                    }
-                }
-            );
-            view.render.view = view;
-            //create the add child view function
-            view.addChildView = addChildView.bind(
-                null
-                , view
-            );
-            view.processChildElement = processChildElement.bind(
-                null
-                , view.namespace
-                , state
-            );
-            //create the destroy closure
-            view[cnsts.destroy] = destroyView.bind(
-                null
-                , view
-            );
-            //execute the controller
-            watchers = controller(
-                view.render
-                , view.attributes
-                , state
-            );
-
-            //if the controller returns a promise, wait for tha to resolve
-            if (is_promise(watchers)) {
-                return watchers
-                .then(
-                    finalizeView.bind(
-                        null
-                        , view
-                    )
-                );
-            }
-            //return the view
-            return finalizeView(
-                view
-                , watchers
-            );
-        }
-        catch(ex) {
-            return promise.reject(ex);
-        }
+    function createView(parentNamespace, controller, element, state) {
+        //create the view token
+        var view = {
+            "element": element
+            , "name": getElementName(element)
+            , "namespace": getViewNamespace(
+                element
+                , parentNamespace
+            )
+            , "state": state
+            , "controller": controller
+            , "attributes": getAttributes(element)
+            , "originalContents": element.children.length > 0
+                ? [...element.children]
+                : null
+            , "children": []
+            , "views": []
+            , "watchers": []
+        };
+        //add the view namespace attribute
+        element.setAttribute(
+            cnsts.viewAttributeNames.namespace
+            , view.namespace
+        );
+        view.attributes.viewNs = view.namespace;
+        //create the render function with the view token
+        view.render = renderView.bind(
+            null
+            , view
+        );
+        view.render.view = view;
+        //create the add child view function
+        view.addChildView = addChildView.bind(
+            null
+            , view
+        );
+        view.processChildElement = processChildElement.bind(
+            null
+            , view.namespace
+            , state
+        );
+        //create the destroy closure
+        view[cnsts.destroy] = destroyView.bind(
+            null
+            , view
+        );
+        
+        return view;
     }
     /**
     * @function
@@ -1055,22 +1004,15 @@ function _SimpleView(
     * @function
     */
     function finalizeView(view, watchers) {
-        try {
-            //create any watchers returned from the controller
-            createWatchers(
-                view
-                , watchers
-            );
-            //run the $render function on the controllers context
-            executeControllerRender(
-                view
-            );
-
-            return promise.resolve(view);
-        }
-        catch(ex) {
-            return promise.reject(ex);
-        }
+        //create any watchers returned from the controller
+        createWatchers(
+            view
+            , watchers
+        );
+        //run the $render function on the controllers context
+        executeControllerRender(
+            view
+        );
     }
     /**
     * @function
@@ -1095,15 +1037,36 @@ function _SimpleView(
     */
     return SimpleView;
 
-    function SimpleView(element, controller, state, parentNamespace = "$") {
-        return new promise(
-            createView.bind(
-                null
-                , parentNamespace
-                , element
-                , controller
+    async function SimpleView(element, controller, state, parentNamespace = "$") {
+        var view = createView(
+            parentNamespace
+            , controller
+            , element
+            , state
+        )
+        , watchers
+        ;
+        //execute the controller
+        if (controller[Symbol.toStringTag] === "AsyncFunction") {
+            watchers = await controller(
+                view.render
+                , view.attributes
                 , state
-            )
+            );
+        }
+        else {
+            watchers = controller(
+                view.render
+                , view.attributes
+                , state
+            );
+        }
+        //return the view
+        finalizeView(
+            view
+            , watchers
         );
+
+        return view;
     };
 }
