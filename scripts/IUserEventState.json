@@ -1,0 +1,79 @@
+{
+    "event": {
+        "type": null
+        , "namespace": null
+        , "timestamp": null
+        , "getEventData": null
+        , "target": {
+            "id": null
+            , "tagName": null
+            , "classList":null
+        }
+        , "preventDefault": null
+        , "stopPropagation": null
+    }
+    , "last": {
+        "type": null
+        , "namespace": null
+        , "timestamp": null
+    }
+    , "focus": {
+        "inNs": ""
+        , "outNs": ""
+    }
+    , "selectedText": null
+    , "window": {
+        "resized": false
+        , "widthDelta": 0
+        , "heightDelta": 0
+    }
+    , "pointer": {
+        "xCoordinate": -1
+        , "yCoordinate": -1
+        , "rightButtonNs": ""
+        , "centerButtonNs": ""
+        , "leftButtonNs": ""
+        , "clickNs": ""
+        , "dblClickNs": ""
+        , "overNs": ""
+    }
+    , "wheel": {
+        "deltaX": 0
+        , "deltaY": 0
+        , "deltaZ": 0
+        , "deltaMode": "pixel"
+    }
+    , "keyboard": {
+        "leftAlt": false
+        , "rightAlt": false
+        , "alt": 0
+        , "leftCtrl": false
+        , "rightCtrl": false
+        , "ctrl": 0
+        , "leftShift": false
+        , "rightShift": false
+        , "shift": 0
+        , "capsLock": false
+        , "character": null
+        , "special": null
+        , "repeatCount": 0
+        , "keysPressed": []
+    }
+    , "scrolling": {
+        "scrollNs": ""
+        , "leftDelta": 0
+        , "topDelta": 0
+    }
+    , "dragDrop": {
+        "draggingNs": ""
+        , "draggingOverNs": ""
+        , "droppedNs": ""
+    }
+    , "form": {
+        "inputNs": ""
+        , "changeNs": ""
+        , "invalidNs": ""
+        , "submitNs": ""
+        , "resetNs": ""
+    }
+}

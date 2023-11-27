@@ -1,5 +1,8 @@
 {
     "document": ["+document"]
+    , "performance": ["+performance"]
+    , "resolve$": ["+$resolve"]
+    , "reporter": [":PunyJS.core.log._Reporter",[]]
     , "is": [{
         "nill": [":PunyJS.core.is.Nill"]
         , "string": [":PunyJS.core.is.String"]
@@ -9,14 +12,22 @@
         , "func": [":PunyJS.core.is.Func"]
         , "promise": [":PunyJS.core.is.Promise"]
         , "upper": [":PunyJS.core.is.Upper"]
+        , "event": [":PunyJS.core.is.Event"]
     }]
     , "utils": [{
         "reference": [":PunyJS.core.object.Reference"]
         , "getType": [":PunyJS.core.utils.GetType"]
+        , "ensure": [":PunyJS.core.object.Ensure"]
         , "update": [":PunyJS.core.object.Update"]
         , "copy": [":PunyJS.core.object.Copy"]
         , "apply": [":PunyJS.core.object.Apply"]
+        , "applyIf": [":PunyJS.core.object.ApplyIf"]
         , "regExp": [":PunyJS.core.regexp._RegExp",[]]
+        , "func": [{
+            "delay": [":PunyJS.core.func._Delay",[]]
+            , "async": [":PunyJS.core.func._Async",[]]
+            , "inspector": [":PunyJS.core.func._Inspector",[]]
+        }]
     }]
     , "dom": [{
         "window": ["+window"]
@@ -59,6 +70,19 @@
             , []
         ]
     }]
+    , "defaults": [
+        ":TruJS.simpleViewSystem.scripts.Defaults"
+        , {"conflictResolution":"error"}
+    ]
+    , "infos": [
+        ":TruJS.simpleViewSystem.scripts.Infos"
+        , {"conflictResolution":"error"}
+    ]
+    , "errors": [
+        ":TruJS.simpleViewSystem.scripts.Errors"
+        , {"conflictResolution":"error"}
+    ]
+    , "eventEmitter": [":PunyJS.core.event._EventEmitter", []]
     , "classHelper": [":PunyJS.core.dom._ClassHelper", []]
     , "styleHelper": [":PunyJS.core.dom._StyleHelper", []]
     , "elementHelper": [":PunyJS.core.dom._ElementHelper", []]
@@ -73,6 +97,8 @@
     , "simpleViewPort": [":TruJS.simpleViewSystem.scripts._SimpleViewPort", []]
     , "createSimpleNamespace": [":TruJS.simpleViewSystem.scripts.CreateSimpleNamespace"]
     , "simpleDefaultController": [":TruJS.simpleViewSystem.scripts._SimpleDefaultController"]
+    , "userEventManager": [":TruJS.simpleViewSystem.scripts._UserEventManager", []]
+    , "iUserEventState": [":TruJS.simpleViewSystem.scripts.IUserEventState"]
     , "simpleMethods": [{
         "$update": [":TruJS.simpleViewSystem.scripts.simpleMethods._UpdateAttribute", []]
         , "$delete": [":TruJS.simpleViewSystem.scripts.simpleMethods._DeleteAttribute", []]

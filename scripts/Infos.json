@@ -1,0 +1,6 @@
+{
+    "userEventManager": {
+        "set_user_event": "[Set User Event] A user event has been set on the state"
+        , "clear_user_event": "[Clear User Event] A user event was cleared from the state"
+    }
+}

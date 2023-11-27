@@ -1,0 +1,10 @@
+{
+    "userEventManager": {
+        "coordinateCaptureMs": 10
+        , "scrollCaptureMs": 10
+        , "options": {
+            "wirePointerMove": true
+            , "wirePointerOverOut": true
+        }
+    }
+}

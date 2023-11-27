@@ -18,7 +18,7 @@ function _SimpleTemplate(
     , simpleMixin
     , createSimpleNamespace
     , xmlBindVariableParser
-    , app_subsystem_userInterface_userEventManager
+    , userEventManager
     , statenet_common_findStateful
     , statenet_common_isStateful
     , dom_createElement
@@ -53,10 +53,6 @@ function _SimpleTemplate(
     * @alias
     */
     , createElement = dom_createElement
-    /**
-    * @alias
-    */
-    , userEventManager = app_subsystem_userInterface_userEventManager
     /**
     * @alias
     */
