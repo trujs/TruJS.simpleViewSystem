@@ -13,8 +13,7 @@
 * @factory
 */
 function _SimpleTemplate(
-    simpleExpression
-    , expression_interface
+    expression_interface
     , simpleMethods
     , simpleMixin
     , createSimpleNamespace
@@ -23,10 +22,8 @@ function _SimpleTemplate(
     , statenet_common_findStateful
     , statenet_common_isStateful
     , dom_createElement
-    , dom_createTextNode
     , dom_createComment
     , is_array
-    , is_object
     , is_objectValue
     , is_empty
     , is_func
@@ -35,10 +32,8 @@ function _SimpleTemplate(
     , is_upper
     , utils_reference
     , reporter
-    , errors
 ) {
-    var TAG_PATT = /\{\:(.*?)\:\}/g
-    , WSP_PATT = /^[ \t\n\r]+$/
+    var WSP_PATT = /^[ \t\n\r]+$/
     , TRIM_PATT = /^[\n\r\t ]+(.*?)[\n\r\t ]+$/gm
     , LN_END_PATT = /\r?\n/g
     , SPC_PATT = /[ ][ ]+/g
@@ -72,7 +67,7 @@ function _SimpleTemplate(
     * Converts the html string into html elements wrapped in a span
     * @function
     */
-    function convertHtml(tag, template, context) {
+    function convertHtml(tag, template) {
         //convert the tag to an element if it is not
         if (!tag || is_string(tag)) {
             tag = createElement(tag || "div");
@@ -1446,9 +1441,6 @@ function _SimpleTemplate(
         var element
         , pathExpressionMap
         , cleanMarkup
-        , childIndex = 0
-        , childNode
-        , childPath
         , context
         ;
 
