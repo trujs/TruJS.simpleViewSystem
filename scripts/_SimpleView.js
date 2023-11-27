@@ -10,15 +10,12 @@ function _SimpleView(
     , simpleErrors
     , simpleStyle
     , document
-    , reporter
     , is_array
     , is_object
     , is_empty
     , is_func
     , is_nill
     , is_string
-    , is_error
-    , is_promise
     , is_upper
     , utils_func_async
     , utils_reference
@@ -115,13 +112,13 @@ function _SimpleView(
         );
         //if there are child nodes then process those and return any sub-views
         if (!is_empty(view.children)) {
+            appendElements(
+                view
+            );
             childViews = await processChildElements(
                 view.namespace
                 , view.children
                 , view.state
-            );
-            appendElements(
-                view
             );
             view.views = childViews;
         }
@@ -131,41 +128,34 @@ function _SimpleView(
     * @function
     */
     async function setupView(view, template, context) {
-        try {
-            //set or reset the view
-            await resetView(
+        //set or reset the view
+        await resetView(
+            view
+            , template
+            , context
+        );
+        //create the state context
+        view.stateContext = createStateContext(
+            view
+        );
+        //clear the element contents
+        view.element.innerHTML = "";
+        //process the html and css templates
+        processTemplates(
+            view
+        );
+        //if there are original contents
+        if (!!view.originalContents) {
+            addBackOriginalElements(
                 view
-                , template
-                , context
             );
-            //create the state context
-            view.stateContext = createStateContext(
-                view
-            );
-            //clear the element contents
-            view.element.innerHTML = "";
-            //process the html and css templates
-            processTemplates(
-                view
-            );
-            //if there are original contents
-            if (!!view.originalContents) {
-                addBackOriginalElements(
-                    view
-                );
-            }
-            //remove the dialog content node regardless if we have original
-            var contentNode =
-                view.element.querySelector(ORIGINAL_CONTENT_NODE_NAME)
-            ;
-            if (!!contentNode) {
-                contentNode.parentNode.removeChild(contentNode);
-            }
-
-            return promise.resolve();
         }
-        catch(ex) {
-            return promise.reject(ex);
+        //remove the dialog content node regardless if we have original
+        var contentNode =
+            view.element.querySelector(ORIGINAL_CONTENT_NODE_NAME)
+        ;
+        if (!!contentNode) {
+            contentNode.parentNode.removeChild(contentNode);
         }
     }
     /**
@@ -290,24 +280,25 @@ function _SimpleView(
     * @function
     */
     function processTemplates(view) {
-        //if we have am html template then process it
-        if (!!view.htmlTemplate) {
-            //process the html and get the elements
-            view.children = Array.prototype.slice.apply(
-                simpleTemplate(
-                    view.namespace
-                    , view.element
-                    , view.htmlTemplate
-                    , view.stateContext
-                ).children
-            );
-        }
-
+        view.children = [];
         //add the style element
         if (!!view.cssTemplate) {
             view.children.push(
                 simpleStyle(view.cssTemplate, view.stateContext)
             );
+        }
+
+        //if we have am html template then process it
+        if (!!view.htmlTemplate) {
+            //process the html and get the elements
+            view.children = view.children.concat(
+                [...simpleTemplate(
+                    view.namespace
+                    , view.element
+                    , view.htmlTemplate
+                    , view.stateContext
+                ).children]
+            )
         }
     }
     /**
@@ -396,7 +387,7 @@ function _SimpleView(
     */
     function processChildView(parentNamespace, tagName, parentState, childEl, controller) {
         try {
-            var childState, isStateless
+            var isStateless
             , stateId = childEl.hasAttribute(cnsts.viewAttributeNames.stateId)
                 ? childEl.getAttribute(cnsts.viewAttributeNames.stateId)
                 : childEl.id || generateId(tagName)
@@ -831,9 +822,8 @@ function _SimpleView(
         , position
         , newState
     ) {
-        var childPath, ref, parentState, views
-        , parent = parentView.element
-        , tempEl, element, view
+        var parent = parentView.element
+        , element
         , childState = await getChildState(
             id
             , tagName
@@ -866,8 +856,22 @@ function _SimpleView(
         element = simpleTemplate(
             viewNamespace
             , tagHtml
-            , parentView.context
+            , parentView.stateContext
         ).children[0];
+        
+        parentView.children.push(element);
+
+        //add the element to the parent
+        if (is_nill(position)) {
+            parent.appendChild(element);
+        }
+        else {
+            parent.insertBefore(
+                element
+                , parent.childNodes[position]
+            );
+        }
+
         //create the view the same way it would be created
         childView = (await processChildElement(
             parentView.namespace
@@ -875,23 +879,15 @@ function _SimpleView(
             , element
         ))[0];
 
-        //add the element to the parent
-        if (is_nill(position)) {
-            parent.appendChild(element);
-            if (!!childView) {
+        //add the view to the list
+        if (!!childView) {
+            if (is_nill(position)) {
                 parentView.views.push(childView);
             }
-        }
-        else {
-            parent.insertBefore(
-                element
-                , parent.childNodes[position]
-            );
-            if (!!childView) {
+            else {
                 parentView.views.splice(position, 0, childView);
             }
         }
-        parentView.children.push(element);
 
         return childView;
     }

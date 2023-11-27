@@ -78,9 +78,19 @@ function _SimpleViewPort(
             if (!!curState) {
                 curState.$destroy();
             }
+            
+            viewport.innerHTML = "";
+
             //save a reference to the state so if this function is called again
             // we can destroy it
             curState = state;
+
+            //compile the base styles
+            styleElement = simpleStyle(
+                Object.values(views_baseStyle)
+                , curState
+            );
+            viewport.appendChild(styleElement);
 
             //create the template element
             element = simpleTemplate(
@@ -88,12 +98,7 @@ function _SimpleViewPort(
                 , template
                 , context
             ).children[0];
-
-            //compile the base styles
-            styleElement = simpleStyle(
-                Object.values(views_baseStyle)
-                , curState
-            );
+            viewport.appendChild(element);
 
             return simpleView(
                 element
@@ -103,9 +108,6 @@ function _SimpleViewPort(
             .then(
                 function thenFinishRender(view) {
                     loaded = true;
-                    viewport.innerHTML = "";
-                    viewport.appendChild(styleElement);
-                    viewport.appendChild(element);
                     return promise.resolve(view);
                 }
             );
