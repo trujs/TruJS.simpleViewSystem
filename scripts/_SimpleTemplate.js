@@ -1211,7 +1211,6 @@ function _SimpleTemplate(
                 , namespace
                 , element
                 , context
-                , eventAttributes
                 , expressionMap
             )
         );
@@ -1219,7 +1218,7 @@ function _SimpleTemplate(
     /**
     * @function
     */
-    function forEachEventAttribute(namespace, element, context, eventAttributes, expressionMap, eventAttribName) {
+    function forEachEventAttribute(namespace, element, context, expressionMap, eventAttribName) {
         //get the expression map for this attribute
         var eventAttribExprMap =
             expressionMap.attributes[eventAttribName]

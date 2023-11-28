@@ -292,12 +292,12 @@ function _SimpleView(
         if (!!view.htmlTemplate) {
             //process the html and get the elements
             view.children = view.children.concat(
-                [...simpleTemplate(
+                ...simpleTemplate(
                     view.namespace
                     , view.element
                     , view.htmlTemplate
                     , view.stateContext
-                ).children]
+                ).children
             )
         }
     }
