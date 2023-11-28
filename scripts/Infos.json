@@ -2,5 +2,11 @@
     "userEventManager": {
         "set_user_event": "[Set User Event] A user event has been set on the state"
         , "clear_user_event": "[Clear User Event] A user event was cleared from the state"
+        , "event_fired": "[Event Fired] An event has been fired"
+        , "add_event_listener": "[Add Event Listener] Add a user event listener"
+        , "remove_event_listener": "[Remove Event Listener] Remove a user event listener"
+        , "emit_event": "[Emit Event] Emit an event"
+        , "bubble_event": "[Bubble Event] Bubble the event"
+        , "execute_listener_handler": "[Execute Listener Handler] Execute a listener handler"
     }
 }

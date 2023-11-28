@@ -150,14 +150,14 @@
 *   @property {boolean} preventDefault a passthrough of the DOM event's preventDefault function
 */
 function _UserEventManager(
-    eventEmitter
-    , dom_window
+    dom_window
     , dom_document
     , performance
     , iUserEventState
     , utils_applyIf
     , utils_copy
     , utils_func_delay
+    , is_object
     , defaults
     , infos
     , errors
@@ -189,6 +189,11 @@ function _UserEventManager(
     * @field
     */
     , lastScrollTop = 0
+    /**
+    * A collection if event listeners
+    * @field
+    */
+    , eventListeners = {}
     ;
 
     const
@@ -196,15 +201,23 @@ function _UserEventManager(
     * @worker
     */
     self = Object.create(
-        eventEmitter()
+        null
         , {
             "initialize": {
                 "enumerable": true
                 , "value": initializeUserEventManager
             }
-            , "handleExternalEvent": {
+            , "emitExternalEvent": {
                 "enumerable": true
                 , "value": handleExternalEvent
+            }
+            , "addListener": {
+                "enumerable": true
+                , "value": addListener
+            }
+            , "removeListener": {
+                "enumerable": true
+                , "value": removeListener
             }
             , "destroy": {
                 "enumerable": true
@@ -364,7 +377,7 @@ function _UserEventManager(
     * A regular expression for spliting namespaces by a dot
     * @property
     */
-    , SPLIT_DOT_PATT = /[.]/g
+    , SPLIT_DOT_PATT = /(?<!\\)[.]/g
     ;
 
     return self;
@@ -1191,23 +1204,21 @@ function _UserEventManager(
     * @function
     */
     function fireEvent(event, namespace) {
-        var callbackInterface = userEventState.event
         //if the target is the window then add that to the event name
-        , eventName = event.target === dom_window
+        var eventName = event.target === dom_window
             ? `window${event.type}`
             : event.type
-        //add the event name to the end of the namespace
-        , fqNamespace = `${namespace}.${eventName}`
         ;
         ///LOGGING
         reporter.report(
             "userevent"
-            , fqNamespace
+            , `${infos.userEventManager.event_fired}\teventName:${eventName},namespace:${namespace}`
         );
         ///END LOGGING
         //should run listeners syncronously so any errors will stop
-        self.emit(
-            fqNamespace
+        emitEvent(
+            eventName
+            , namespace
             , userEventState.event
         );
     }
@@ -1341,7 +1352,7 @@ function _UserEventManager(
     */
     function destroyUserEventManager() {
         //remove listeners from the event emitter
-        self.off();
+        eventListeners = {};
         //remove the dom listeners
         removeDOMListeners();
         //release the references to the external dependencies
@@ -1383,4 +1394,166 @@ function _UserEventManager(
             }
         }
     }
+
+
+    /**
+    * @function
+    * @config options
+    *   @param bubble {boolean} When true the listener will be fired when 
+    *   downstream namespaces are fired
+    */
+    function addListener(eventName, namespace, handler) {
+        let eventRoot = eventListeners[eventName]
+            || (eventListeners[eventName] = {})
+        , listenerEntries = eventRoot[namespace]
+            || (eventRoot[namespace] = [])
+        ;
+        if (!findListenerEntry(listenerEntries, handler)) {
+            ///LOGGING
+            reporter.report(
+                "userevent"
+                , `${infos.userEventManager.add_event_listener}\teventName:${eventName}, namespace:${namespace}`
+            );
+            ///END LOGGING
+            listenerEntries.push(handler);
+        }
+    }
+    /**
+    * @function
+    */
+    function removeListener(eventName, namespace, handler) {
+        let eventRoot = eventListeners[eventName]
+        , listenerEntries = !!eventRoot
+            && eventRoot[namespace]
+        , entry = !!listenerEntries
+            && findListenerEntry(
+                listenerEntries
+                , handler
+            )
+        , entryIndex
+        ;
+        if (!entry) {
+            return false;
+        }
+        ///LOGGING
+        reporter.report(
+            "userevent"
+            , `${infos.userEventManager.remove_event_listener}\teventName:${eventName},namespace:${namespace}`
+        );
+        ///END LOGGING
+        //get the entry index so we can splice
+        entryIndex = listenerEntries
+            .indexOf(
+                entry
+            )
+        ;
+        //remove the entry from the array
+        listenerEntries
+            .splice(
+                entryIndex
+                , 1
+            )
+        ;
+
+        return true;
+    }
+    /**
+    * @function
+    */
+    function emitEvent(eventName, namespace, event) {
+        let eventRoot = eventListeners[eventName]
+        , listenerEntries = !!eventRoot
+            && eventRoot[namespace]
+        ;
+        if (!listenerEntries) {
+            return;
+        }
+        ///LOGGING
+        reporter.report(
+            "userevent"
+            , `${infos.userEventManager.emit_event}\teventName:${eventName},namespace:${namespace}`
+        );
+        ///END LOGGING
+        //execute all of the listener entries handlers
+        executeHandlers(
+            listenerEntries
+            , event
+        );
+        //bubble the event
+        bubbleEvent(
+            eventName
+            , namespace
+            , event
+        );
+    }
+    /**
+    * @function
+    */
+    function findListenerEntry(listenerEntries, handler) {
+        for (let entry of listenerEntries) {
+            //match the handler and options
+            if (
+                entry === handler
+            ) {
+                return entry;
+            }
+        }
+    }
+    /**
+    * @function
+    */
+    function executeHandlers(listenerEntries, event) {
+        //loop through each entry and execute the handlers
+        for (let entry of listenerEntries) {
+            executeHandler(
+                entry
+                , event
+            );
+        }
+    }
+    /**
+    * @function
+    */
+    function executeHandler(handler, event) {
+        ///LOGGING
+        reporter.report(
+            "userevent-extended"
+            , `${infos.userEventManager.execute_listener_handler}`
+        );
+        ///END LOGGING
+        handler(
+            event
+        );
+    }
+    /**
+    * @function
+    */
+    function bubbleEvent(eventName, namespace, event) {
+        let eventRoot = eventListeners[eventName]
+        , segments = namespace.split(SPLIT_DOT_PATT)
+        , newNamespace
+        , listenerEntries
+        ;
+        
+        while(segments.length > 0) {
+            segments.pop();
+            newNamespace = segments.join(".");
+            listenerEntries = eventRoot[
+                newNamespace
+            ];
+            
+            if (!!listenerEntries) {
+                ///LOGGING
+                reporter.report(
+                    "userevent"
+                    , `${infos.userEventManager.bubble_event}\teventName:${eventName},namespace:${newNamespace}`
+                );
+                ///END LOGGING
+                executeHandlers(
+                    listenerEntries
+                    , event
+                );
+            }
+        }
+    } 
 }

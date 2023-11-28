@@ -1227,20 +1227,24 @@ function _SimpleTemplate(
         , exprKey = Object.keys(eventAttribExprMap.expressions)[0]
         , eventHandlerExpr = eventAttribExprMap.expressions[exprKey]
         , eventName = eventAttribName.substring(2)
-        , eventNamespace = `${namespace}.${eventName}`
         , eventHandler = executeHandler.bind(
             null
             , eventHandlerExpr
             , context
         );
         //put the user event manager in the middle
-        userEventManager.on(
-            eventNamespace
+        userEventManager.addListener(
+            eventName
+            , namespace
             , eventHandler
         );
         //
         element.listenedEvents.push(
-            eventNamespace
+            {
+                "eventName": eventName
+                , "namespace": namespace
+                , "handler": eventHandler
+            }
         );
     }
     /**
@@ -1393,8 +1397,12 @@ function _SimpleTemplate(
             //remove user event listeners
             if (!!listenedEvents) {
                 listenedEvents.forEach(
-                    function forEachListenedEventName(eventNamespace) {
-                        userEventManager.off(eventNamespace);
+                    function forEachListenedEventName(listenedEvent) {
+                        userEventManager.removeListener(
+                            listenedEvent.eventName
+                            , listenedEvent.namespace
+                            , listenedEvent.handler
+                        );
                     }
                 );
             }
