@@ -399,7 +399,7 @@ function _SimpleView(
             , proc = promise.resolve()
             , modifiedParentNamespace = stateId.indexOf(".") !== -1
                 ? childEl.namespace
-                    .replace(`.${stateId}`, "$1")
+                    .replace(`.${stateId}`, "")
                 : childEl.namespace
                     .replace(NS_LAST_SEGMENT, "$1")
             ;
