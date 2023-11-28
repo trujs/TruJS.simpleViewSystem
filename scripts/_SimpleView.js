@@ -33,6 +33,7 @@ function _SimpleView(
     , TAG_PATT = /\{([^}]+)\}/g
     , ORIGINAL_CONTENT_NODE_NAME = "original-content"
     , HTML_TAG_PATT = /[<]([A-z0-9_-]+)/g
+    , NS_LAST_SEGMENT = /(.*)(?<!\\)[.][^.]+$/
     , cnsts = {
         "destroy": "$destroy"
         , "watch": "$addListener"
@@ -396,6 +397,8 @@ function _SimpleView(
                     .replace(DOT_PATT, "-")
                 : tagName
             , proc = promise.resolve()
+            , modifiedParentNamespace = childEl.namespace
+                .replace(NS_LAST_SEGMENT, "$1")
             ;
             //see if the controller is stateless
             isStateless = childEl.hasAttribute("stateless");
@@ -437,7 +440,7 @@ function _SimpleView(
                             childEl
                             , controller
                             , childState
-                            , parentNamespace
+                            , modifiedParentNamespace
                         );
                     }
                 }
