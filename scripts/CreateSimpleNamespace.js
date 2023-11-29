@@ -29,7 +29,7 @@ function CreateSimpleNamespace(parentNamespace, node, options = {}) {
     ;
     //add the id if there is one
     if (!!node.id && options.noid !== true) {
-        path+= `#${node.id}`;
+        path+= `#(${node.id})`;
     }
 
     return path;
