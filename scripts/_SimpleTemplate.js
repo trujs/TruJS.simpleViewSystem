@@ -188,7 +188,8 @@ function _SimpleTemplate(
         , context = createContext(
             element
             , data
-        );
+        )
+        , ifResult;
         //a temporary container for watchers
         element.watchers = [];
         //see if this is a repeat
@@ -202,13 +203,16 @@ function _SimpleTemplate(
             );
         }
         else if (element.nodeName.toLowerCase() === "if") {
-            processIfElement(
+            ifResult = processIfElement(
                 parentNamespace
                 , element
                 , pathExprMap
                 , context
                 , path
             );
+            if (!ifResult) {
+                return;
+            }
         }
         else if (element.nodeName.toLowerCase() === "else") {
             //remove the else
@@ -235,13 +239,16 @@ function _SimpleTemplate(
         }
         else {
             if (element.hasAttribute("repeat") && element.hasAttribute("if")) {
-                processIfAttrib(
+                ifResult = processIfAttrib(
                     parentNamespace
                     , element
                     , pathExprMap
                     , context
                     , path
                 );
+                if (!ifResult) {
+                    return;
+                }
                 if (!!element.parentNode) {
                     processRepeatAttrib(
                         parentNamespace
@@ -265,13 +272,16 @@ function _SimpleTemplate(
                 );
             }
             else if (element.hasAttribute("if")) {
-                processIfAttrib(
+                ifResult = processIfAttrib(
                     parentNamespace
                     , element
                     , pathExprMap
                     , context
                     , path
                 );
+                if (!ifResult) {
+                    return;
+                }
             }
             else {
                 //process all non-event attributes, return the event attribute
@@ -804,13 +814,14 @@ function _SimpleTemplate(
         )
         , elseEl = element.nextElementSibling
         , elseNodes
+        , pass
         ;
 
         if (!!elseEl && elseEl.nodeName.toLowerCase() === "else") {
             elseNodes = elseEl.childNodes;
         }
 
-        doIf(
+        pass = doIf(
             parentNamespace
             , element
             , compiledExpr
@@ -823,6 +834,8 @@ function _SimpleTemplate(
 
         //remove the if
         element.parentNode.removeChild(element);
+
+        return pass;
     }
     /**
     * Evaluates the if expression found in the if attribute
@@ -867,6 +880,8 @@ function _SimpleTemplate(
         else if (!!elseEl) {
             elseEl.parentNode.removeChild(elseEl);
         }
+
+        return pass;
     }
     /**
     * Evaluates the if expression, if fails, removes the element and all of it's
@@ -1231,6 +1246,7 @@ function _SimpleTemplate(
             , eventHandlerExpr
             , context
         );
+        
         //put the user event manager in the middle
         userEventManager.addListener(
             eventName
