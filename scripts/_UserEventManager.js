@@ -1159,11 +1159,19 @@ function _UserEventManager(
             , "target": {
                 "id": event.target.id
                 , "tagName": event.target.tagName
-                , "classList": event.target.classList
+                , "classList": [...event.target.classList]
             }
             , "preventDefault": event.preventDefault.bind(event)
             , "stopPropagation": event.stopPropagation.bind(event)
         };
+        //add the related target if available
+        if (!!event.relatedTarget) {
+            userEventState.event.relatedTarget = {
+                "id": event.relatedTarget.id
+                , "tagName": event.relatedTarget.tagName
+                , "classList": [...event.relatedTarget.classList]
+            };
+        }
         ///LOGGING
         reporter.report(
             "userevent-extended"
