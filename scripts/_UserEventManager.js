@@ -1212,6 +1212,10 @@ function _UserEventManager(
     * @function
     */
     function fireEvent(event, namespace) {
+        //if the event target is outside the view system it won't have a ns
+        if (!namespace) {
+            return;
+        }
         //if the target is the window then add that to the event name
         var eventName = event.target === dom_window
             ? `window${event.type}`
@@ -1473,20 +1477,23 @@ function _UserEventManager(
         , listenerEntries = !!eventRoot
             && eventRoot[namespace]
         ;
-        if (!listenerEntries) {
+        if (!eventRoot) {
             return;
         }
-        ///LOGGING
-        reporter.report(
-            "userevent"
-            , `${infos.userEventManager.emit_event}\teventName:${eventName},namespace:${namespace}`
-        );
-        ///END LOGGING
-        //execute all of the listener entries handlers
-        executeHandlers(
-            listenerEntries
-            , event
-        );
+        if (!!listenerEntries) {
+            ///LOGGING
+            reporter.report(
+                "userevent"
+                , `${infos.userEventManager.emit_event}\teventName:${eventName},namespace:${namespace}`
+            );
+            ///END LOGGING
+            //execute all of the listener entries handlers
+            executeHandlers(
+                listenerEntries
+                , event
+            );
+        }
+        
         //bubble the event
         bubbleEvent(
             eventName
