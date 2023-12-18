@@ -828,6 +828,7 @@ function _SimpleView(
         , selector
         , position
         , newState
+        , contentHTML
     ) {
         var parent = parentView.element
         , element
@@ -865,6 +866,11 @@ function _SimpleView(
             , tagHtml
             , parentView.stateContext
         ).children[0];
+
+        //if there are contents then add them
+        if (!!element) {
+            element.innerHTML = contentHTML;
+        }
         
         parentView.children.push(element);
 
