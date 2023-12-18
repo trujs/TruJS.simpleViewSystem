@@ -90,15 +90,13 @@ function _SimpleViewPort(
                 Object.values(views_baseStyle)
                 , curState
             );
-            viewport.appendChild(styleElement);
-
+            
             //create the template element
             element = simpleTemplate(
                 "$"
                 , template
                 , context
             ).children[0];
-            viewport.appendChild(element);
 
             return simpleView(
                 element
@@ -108,6 +106,9 @@ function _SimpleViewPort(
             .then(
                 function thenFinishRender(view) {
                     loaded = true;
+                    viewport.innerHTML = "";
+                    viewport.appendChild(styleElement);
+                    viewport.appendChild(element);
                     return promise.resolve(view);
                 }
             );

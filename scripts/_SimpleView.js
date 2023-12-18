@@ -113,15 +113,16 @@ function _SimpleView(
         );
         //if there are child nodes then process those and return any sub-views
         if (!is_empty(view.children)) {
-            appendElements(
-                view
-            );
+            
             childViews = await processChildElements(
                 view.namespace
                 , view.children
                 , view.state
             );
             view.views = childViews;
+            appendElements(
+                view
+            );
         }
         return view;
     }
